@@ -83,7 +83,6 @@ function IncomeManager() {
             <div className="text-right">
             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Take Home</label>
             <div className="p-2 text-green-700 font-bold">
-                {/* This uses our new formatter on the fly! */}
                 {formatter.format(item.gross * (1 - (item.taxRate || 0) / 100))}
             </div>
             </div>
