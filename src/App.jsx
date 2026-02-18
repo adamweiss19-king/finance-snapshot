@@ -2,6 +2,7 @@ import { useState } from 'react'
 import IncomeManager from './components/IncomeManager'
 import AssetManager from './components/AssetManager'
 import DebtManager from './components/DebtManager'
+import SpendingManager from './components/SpendingManager'
 
 function App() {
   return (
@@ -12,13 +13,28 @@ function App() {
           <p className="text-gray-500 mt-2">Design your year. Track your growth.</p>
         </header>
         
-        <main>
-          {}
-          <IncomeManager />
-          <AssetManager />
-          <DebtManager />
-        </main>
+ <main>
+          {/* This is the magic layout line: 1 col on mobile, 3 cols on large screens */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            
+            <section className="space-y-4">
+              <IncomeManager />
+            </section>
 
+            <section className="space-y-4">
+              <AssetManager />
+            </section>
+
+            <section className="space-y-4">
+              <DebtManager />
+            </section>
+
+            <section className="space-y-4">
+              <SpendingManager />
+            </section>
+
+          </div>
+        </main>
       </div>
     </div>
   )

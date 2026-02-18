@@ -1,3 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  The original project styles are left below as a comment.
+  You can move any custom rules below these directives if you
+  want them to override Tailwind's defaults.
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -66,3 +75,4 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+*/
