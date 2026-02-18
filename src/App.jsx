@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import IncomeManager from './components/IncomeManager' // This is the new line!
+import IncomeManager from './components/IncomeManager'
+import AssetManager from './components/AssetManager'
+import DebtManager from './components/DebtManager'
 
 function App() {
   return (
@@ -11,8 +13,10 @@ function App() {
         </header>
         
         <main>
-          {/* We are "calling" our component here */}
+          {}
           <IncomeManager />
+          <AssetManager />
+          <DebtManager />
         </main>
 
       </div>
