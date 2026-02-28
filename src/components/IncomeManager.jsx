@@ -7,34 +7,29 @@ const formatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0, 
 });
 
-function IncomeManager() {
-  // 1. STATE: This is where we store our list of income sources
-  const [incomes, setIncomes] = useState([
-    { id: 1, name: 'Salary', gross: 100000, taxRate: 25 }
-  ]);
-
-  // 2. LOGIC: Functions to change the data
-  const addIncome = () => {
+function IncomeManager({ data, setData }) {
+  // 1. LOGIC: Functions to change the data
+ // Update your logic functions to use 'setData' and 'data'
+ const addIncome = () => {
     const newIncome = { id: Date.now(), name: '', gross: 0, taxRate: 0 };
-    setIncomes([...incomes, newIncome]);
+    setData([...data, newIncome]);
   };
 
   const updateIncome = (id, field, value) => {
-    const updated = incomes.map(item => 
+    const updated = data.map(item => 
       item.id === id ? { ...item, [field]: value } : item
     );
-    setIncomes(updated);
+    setData(updated);
   };
 
   const removeIncome = (id) => {
-    setIncomes(incomes.filter(item => item.id !== id));
+    setData(data.filter(item => item.id !== id));
   };
 
-  // 3. THE MATH: Calculating the totals
-  const totalNet = incomes.reduce((acc, item) => {
-    const net = item.gross * (1 - item.taxRate / 100);
-    return acc + net;
-  }, 0);
+  // Update the math to use 'data' instead of 'incomes'
+  const totalNet = data.reduce((acc, item) => {
+    const net = (item.gross || 0) * (1 - (item.taxRate || 0) / 100);
+    return a
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">

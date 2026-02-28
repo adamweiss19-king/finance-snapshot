@@ -8,31 +8,28 @@ const formatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 });
 
-function AssetManager() {
-  const [assets, setAssets] = useState([
-    { id: 1, name: '401k', balance: 50000, contribution: 10000, growth: 7 }
-  ]);
+function AssetManager({ assets, setAssets }) {
 
   const addAsset = () => {
-    setAssets([...assets, { id: Date.now(), name: '', balance: 0, contribution: 0, growth: 0 }]);
+    setData([...data, { id: Date.now(), name: '', balance: 0, contribution: 0, growth: 0 }]);
   };
 
   const updateAsset = (id, field, value) => {
-    setAssets(assets.map(a => a.id === id ? { ...a, [field]: value } : a));
+    setData(data.map(a => a.id === id ? { ...a, [field]: value } : a));
   };
 
   const removeAsset = (id) => {
-    setAssets(assets.filter(a => a.id !== id));
+    setData(data.filter(a => a.id !== id));
   };
 
  // 1. Current Total (What you have today)
-const totalCurrent = assets.reduce((acc, asset) => acc + (asset.balance || 0), 0);
+const totalCurrent = data.reduce((acc, asset) => acc + (asset.balance || 0), 0);
 
 // 2. Contributions Total (The "New Money" you are adding)
-const totalContributions = assets.reduce((acc, asset) => acc + (asset.contribution || 0), 0);
+const totalContributions = data.reduce((acc, asset) => acc + (asset.contribution || 0), 0);
 
 // 3. Interest/Growth Subtotal (The "Free Money" from the market)
-const totalGrowth = assets.reduce((acc, asset) => {
+const totalGrowth = data.reduce((acc, asset) => {
   return acc + ((asset.balance || 0) * ((asset.growth || 0) / 100));
 }, 0);
 

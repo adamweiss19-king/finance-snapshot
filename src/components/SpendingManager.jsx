@@ -5,11 +5,7 @@ const formatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   minimumFractionDigits: 0,
 });
-
-function SpendingManager() {
-  // We'll start with a default estimate of $5,000/month
-  const [annualSpend, setAnnualSpend] = useState(60000);
-
+function SpendingManager({ value, setValue }) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mt-8">
       <div className="mb-6">

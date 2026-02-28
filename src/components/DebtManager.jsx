@@ -7,31 +7,27 @@ const formatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 });
 
-function DebtManager() {
-  const [debts, setDebts] = useState([
-    { id: 1, name: 'Car Loan', balance: 15000, interestRate: 5, annualPayment: 4000 }
-  ]);
-
+function DebtManager({ data, setData }) {
   const addDebt = () => {
-    setDebts([...debts, { id: Date.now(), name: '', balance: 0, interestRate: 0, annualPayment: 0 }]);
+    setData([...data, { id: Date.now(), name: '', balance: 0, interestRate: 0, annualPayment: 0 }]);
   };
 
   const updateDebt = (id, field, value) => {
-    setDebts(debts.map(d => d.id === id ? { ...d, [field]: value } : d));
+    setData(data.map(d => d.id === id ? { ...d, [field]: value } : d));
   };
 
   const removeDebt = (id) => {
-    setDebts(debts.filter(d => d.id !== id));
+    setData(data.filter(d => d.id !== id));
   };
 
   // THE MATH: Simple Annual Amortization
-  const totalInterest = debts.reduce((acc, debt) => {
+  const totalInterest = data.reduce((acc, debt) => {
     // A simplified yearly interest calculation: Balance * Rate
-    return acc + ((debt.balance || 0) * ((debt.interestRate || 0) / 100));
+    return acc + ((data.balance || 0) * ((data.interestRate || 0) / 100));
   }, 0);
 
-  const totalPayments = debts.reduce((acc, debt) => acc + (debt.annualPayment || 0), 0);
-  const currentTotalDebt = debts.reduce((acc, debt) => acc + (debt.balance || 0), 0);
+  const totalPayments = data.reduce((acc, debt) => acc + (debt.annualPayment || 0), 0);
+  const currentTotalDebt = data.reduce((acc, debt) => acc + (debt.balance || 0), 0);
   
   // EOY Balance = Starting Balance + Interest - Payments
   const totalEOYDebt = currentTotalDebt + totalInterest - totalPayments;
