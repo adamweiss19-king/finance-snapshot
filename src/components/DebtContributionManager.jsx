@@ -4,9 +4,9 @@ const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0,
 });
 
-function DebtContributionManager({ data, setData }) {
+function DebtContributionManager({ data, setData, debts }) {
   const addContribution = () => {
-    setData([...data, { id: Date.now(), name: '', amount: 0, type: 'Required' }]);
+    setData([...data, { id: Date.now(), name: '', amount: 0, type: 'Mandatory' }]);
   };
 
   const updateContribution = (id, field, value) => {
@@ -36,18 +36,24 @@ function DebtContributionManager({ data, setData }) {
           <div key={item.id} className="bg-red-50/30 p-4 rounded-xl border border-red-100 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="md:col-span-1">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Debt Target</label>
-              <input 
-                type="text" value={item.name} onChange={(e) => updateContribution(item.id, 'name', e.target.value)}
-                placeholder="e.g. Car Loan" className="w-full border-gray-300 rounded-md p-2 border"
-              />
+              <select 
+                value={item.linkedId || ''} 
+                onChange={(e) => updateContribution(item.id, 'linkedId', e.target.value)}
+                className="w-full border-gray-300 rounded-md p-2 border bg-white"
+              >
+                <option value="" disabled>-- Select a Debt --</option>
+                {debts && debts.map(debt => (
+                  <option key={debt.id} value={debt.id}>{debt.name || 'Unnamed Debt'}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Type</label>
               <select 
-                value={item.type || 'Required'} onChange={(e) => updateContribution(item.id, 'type', e.target.value)}
+                value={item.type || 'Mandatory'} onChange={(e) => updateContribution(item.id, 'type', e.target.value)}
                 className="w-full border-gray-300 rounded-md p-2 border bg-white"
               >
-                <option value="Required">Required</option>
+                <option value="Mandatory">Mandatory</option>
                 <option value="Discretionary">Discretionary</option>
               </select>
             </div>

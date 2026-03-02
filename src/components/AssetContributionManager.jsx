@@ -4,7 +4,7 @@ const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0,
 });
 
-function AssetContributionManager({ data, setData }) {
+function AssetContributionManager({ data, setData , assets}) {
   const addContribution = () => {
     setData([...data, { id: Date.now(), name: '', amount: 0 }]);
   };
@@ -36,10 +36,16 @@ function AssetContributionManager({ data, setData }) {
           <div key={item.id} className="bg-blue-50/30 p-4 rounded-xl border border-blue-100 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div className="md:col-span-1">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Destination Account</label>
-              <input 
-                type="text" value={item.name} onChange={(e) => updateContribution(item.id, 'name', e.target.value)}
-                placeholder="e.g. Vanguard ETF" className="w-full border-gray-300 rounded-md p-2 border"
-              />
+              <select 
+                value={item.linkedId || 'new'} 
+                onChange={(e) => updateContribution(item.id, 'linkedId', e.target.value)}
+                className="w-full border-gray-300 rounded-md p-2 border bg-white"
+              >
+                <option value="new">✨ New / Unlinked Account</option>
+                {assets && assets.map(asset => (
+                  <option key={asset.id} value={asset.id}>{asset.name || 'Unnamed Asset'}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Amount to Invest</label>
