@@ -29,7 +29,8 @@ function IncomeManager({ data, setData }) {
   // Update the math to use 'data' instead of 'incomes'
   const totalNet = data.reduce((acc, item) => {
     const net = (item.gross || 0) * (1 - (item.taxRate || 0) / 100);
-    return a
+    return acc + net;
+  }, 0);
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -44,7 +45,7 @@ function IncomeManager({ data, setData }) {
       </div>
 
       <div className="space-y-4">
-        {incomes.map((item) => (
+        {data.map((item) => (
           <div key={item.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border-b pb-4 border-gray-50">
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Source Name</label>

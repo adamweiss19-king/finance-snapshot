@@ -23,17 +23,17 @@ function DebtManager({ data, setData }) {
   // THE MATH: Simple Annual Amortization
   const totalInterest = data.reduce((acc, debt) => {
     // A simplified yearly interest calculation: Balance * Rate
-    return acc + ((data.balance || 0) * ((data.interestRate || 0) / 100));
+    return acc + ((debt.balance || 0) * ((debt.interestRate || 0) / 100));
   }, 0);
 
   const totalPayments = data.reduce((acc, debt) => acc + (debt.annualPayment || 0), 0);
   const currentTotalDebt = data.reduce((acc, debt) => acc + (debt.balance || 0), 0);
   
   // EOY Balance = Starting Balance + Interest - Payments
-  const totalEOYDebt = currentTotalDebt + totalInterest - totalPayments;
+  const totalEOYDebt = currentTotalDebt + totalInterest;
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mt-8">
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Debt Manager</h2>
         <button onClick={addDebt} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition">
@@ -42,8 +42,8 @@ function DebtManager({ data, setData }) {
       </div>
 
       <div className="space-y-4">
-        {debts.map((debt) => (
-          <div key={debt.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end border-b pb-4 border-gray-50">
+        {data.map((debt) => (
+          <div key={debt.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border-b pb-4 border-gray-50">
             <div className="md:col-span-1">
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Debt Name</label>
               <input 
@@ -69,15 +69,6 @@ function DebtManager({ data, setData }) {
                 type="number" 
                 value={debt.interestRate === 0 ? '' : debt.interestRate}
                 onChange={(e) => updateDebt(debt.id, 'interestRate', parseFloat(e.target.value) || 0)}
-                className="w-full border-gray-300 rounded-md p-2 border"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Annual Payment</label>
-              <input 
-                type="number" 
-                value={debt.annualPayment === 0 ? '' : debt.annualPayment}
-                onChange={(e) => updateDebt(debt.id, 'annualPayment', parseFloat(e.target.value) || 0)}
                 className="w-full border-gray-300 rounded-md p-2 border"
               />
             </div>

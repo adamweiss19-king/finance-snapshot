@@ -8,9 +8,11 @@ const formatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 });
 
-function AssetManager({ assets, setAssets }) {
-
+// 1. Make sure { data, setData } is inside these braces
+function AssetManager({ data, setData }) {
+  
   const addAsset = () => {
+    // 2. Ensure you are using 'setData' and 'data' here
     setData([...data, { id: Date.now(), name: '', balance: 0, contribution: 0, growth: 0 }]);
   };
 
@@ -22,22 +24,17 @@ function AssetManager({ assets, setAssets }) {
     setData(data.filter(a => a.id !== id));
   };
 
- // 1. Current Total (What you have today)
-const totalCurrent = data.reduce((acc, asset) => acc + (asset.balance || 0), 0);
+  // 3. Update the math section to use 'data' instead of 'assets'
+  const totalCurrent = data.reduce((acc, asset) => acc + (asset.balance || 0), 0);
 
-// 2. Contributions Total (The "New Money" you are adding)
-const totalContributions = data.reduce((acc, asset) => acc + (asset.contribution || 0), 0);
+  const totalGrowth = data.reduce((acc, asset) => {
+    return acc + ((asset.balance || 0) * ((asset.growth || 0) / 100));
+  }, 0);
 
-// 3. Interest/Growth Subtotal (The "Free Money" from the market)
-const totalGrowth = data.reduce((acc, asset) => {
-  return acc + ((asset.balance || 0) * ((asset.growth || 0) / 100));
-}, 0);
-
-// 4. The Grand Total (Sum of all three)
-const totalEOY = totalCurrent + totalContributions + totalGrowth;
+  const totalEOY = totalCurrent + totalGrowth;
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mt-8">
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Asset Manager</h2>
         <button
@@ -49,7 +46,7 @@ const totalEOY = totalCurrent + totalContributions + totalGrowth;
       </div>
 
       <div className="space-y-4">
-        {assets.map((asset) => (
+        {data.map((asset) => (
           <div
             key={asset.id}
             className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end border-b pb-4 border-gray-50"
@@ -76,17 +73,7 @@ const totalEOY = totalCurrent + totalContributions + totalGrowth;
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Annual Contrib.</label>
-              <input
-                type="number"
-                value={asset.contribution === 0 ? '' : asset.contribution}
-                onChange={(e) => updateAsset(asset.id, 'contribution', parseFloat(e.target.value) || 0)}
-                className="w-full border-gray-300 rounded-md p-2 border"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Growth %</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Projected Growth %</label>
               <input
                 type="number"
                 value={asset.growth === 0 ? '' : asset.growth}
@@ -112,19 +99,13 @@ const totalEOY = totalCurrent + totalContributions + totalGrowth;
           <span className="font-semibold text-gray-800">{formatter.format(totalCurrent)}</span>
         </div>
 
-        {/* Row 2: Contributions */}
-        <div className="flex justify-between items-center text-gray-600 text-sm">
-          <span>Total Annual Contributions:</span>
-          <span className="font-semibold text-blue-600">+ {formatter.format(totalContributions)}</span>
-        </div>
-
-        {/* Row 3: Growth */}
+        {/* Row 2: Growth */}
         <div className="flex justify-between items-center text-gray-600 text-sm italic">
           <span>Estimated Market Growth:</span>
           <span className="font-semibold text-green-600">+ {formatter.format(totalGrowth)}</span>
         </div>
 
-        {/* Row 4: Grand Total */}
+        {/* Row 3: Grand Total */}
         <div className="flex justify-between items-center text-blue-900 bg-blue-50 p-4 rounded-xl border border-blue-100">
           <div>
             <span className="block text-xs uppercase font-bold tracking-wider opacity-70">Projected EOY Balance</span>
