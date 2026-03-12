@@ -10,12 +10,12 @@ import { getDemoProfile } from './utils/demoProfiles';
 
 function App() {
   // STATE 1: THE FOUNDATION 
-  const [incomeData, setIncomeData] = useState([
-    { id: 1, name: 'Salary', gross: 100000, taxRate: 25 }
+const [incomeData, setIncomeData] = useState([
+    { id: 1, name: 'Salary', gross: 100000, taxRate: 25, type: 'W-2 Salary', isTaxable: true }
   ]);
   const [assetData, setAssetData] = useState([
-    { id: 1, name: 'Chase Savings', category: 'Bank Account/Savings', balance: 15000, growth: 0 },
-    { id: 2, name: 'Fidelity 401k', category: '401k', balance: 50000, growth: 7 }
+    { id: 1, name: 'Chase Savings', bucket: 'Cash', category: 'Bank Account/Savings', balance: 15000, growth: 0 },
+    { id: 2, name: 'Fidelity 401k', bucket: 'Retirement', category: '401k', balance: 50000, growth: 7 }
   ]);
   const [debtData, setDebtData] = useState([
     { id: 1, name: 'Car Loan', balance: 15000, interestRate: 5 }
@@ -23,14 +23,14 @@ function App() {
 
   // STATE 2: THE FLOW 
   const [spendingData, setSpendingData] = useState([
-    { id: 1, name: 'Rent', category: 'Housing', amount: 24000, type: 'Required' },
+    { id: 1, name: 'Rent', category: 'Housing', amount: 24000, type: 'Mandatory' },
     { id: 2, name: 'Vacation Fund', category: 'Lifestyle & Fun', amount: 5000, type: 'Discretionary' }
   ]);
   const [contributionData, setContributionData] = useState([
-    { id: 1, name: '401k Match', amount: 10000, type: 'Required', linkedId: '2', frequency: 'Monthly' }
+    { id: 1, name: '401k Match', amount: 10000, type: 'Mandatory', linkedId: '2', frequency: 'Monthly' }
   ]);
   const [debtContributionData, setDebtContributionData] = useState([
-    { id: 1, name: 'Car Loan Minimum', amount: 4000, type: 'Required', linkedId: '1', frequency: 'Monthly' }
+    { id: 1, name: 'Car Loan Minimum', amount: 4000, type: 'Mandatory', linkedId: '1', frequency: 'Monthly' }
   ]);
 
   // DEMO PROFILES LOADER
@@ -48,10 +48,14 @@ function App() {
 
   // MATH HELPERS
   const calcTotal = (data) => data.reduce((acc, item) => acc + (item.amount || 0), 0);
-  const calcMandatory = (data) => data.reduce((acc, item) => acc + (item.type === 'Required' ? (item.amount || 0) : 0), 0);
+  const calcMandatory = (data) => data.reduce((acc, item) => acc + (item.type === 'Mandatory' ? (item.amount || 0) : 0), 0);
   const calcDiscretionary = (data) => data.reduce((acc, item) => acc + (item.type === 'Discretionary' ? (item.amount || 0) : 0), 0);
 
-  const totalNetIncome = incomeData.reduce((acc, item) => acc + (item.gross * (1 - item.taxRate / 100)), 0);
+const totalNetIncome = incomeData.reduce((acc, item) => {
+    // If isTaxable is explicitly false, tax is 0. Otherwise, use the taxRate.
+    const effectiveTaxRate = item.isTaxable === false ? 0 : (item.taxRate || 0);
+    return acc + (item.gross * (1 - effectiveTaxRate / 100));
+  }, 0);
   const getPct = (amount) => totalNetIncome > 0 ? Math.round((amount / totalNetIncome) * 100) : 0;
 
   // Calculate the new buckets
@@ -63,8 +67,7 @@ function App() {
   const totalContributions = calcTotal(contributionData);
 
   // --- EMERGENCY RUNWAY MATH ---
-  const liquidCash = assetData.filter(a => a.category === 'Bank Account/Savings').reduce((acc, a) => acc + (a.balance || 0), 0);
-  const monthlyMandatory = totalMandatory / 12;
+  const liquidCash = assetData.filter(a => a.bucket === 'Cash' || a.category === 'Bank Account/Savings').reduce((acc, a) => acc + (a.balance || 0), 0);  const monthlyMandatory = totalMandatory / 12;
   const runwayMonths = monthlyMandatory > 0 ? (liquidCash / monthlyMandatory) : 0;
   const isRunwayLow = runwayMonths < 2.76; // 12 weeks = ~2.76 months
 
@@ -113,24 +116,25 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-gray-900 flex flex-col">
       <div className="max-w-[1600px] mx-auto w-full flex-grow">
-        
-        {/* DEMO MODE TOGGLES */}
         <div className="mb-8 bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="text-indigo-900 font-bold flex items-center gap-2">
               🧪 Test Data Templates
             </h3>
-            <p className="text-indigo-700 text-xs">Instantly load realistic financial profiles to see how the math works.</p>
+            <p className="text-indigo-700 text-xs">Instantly load realistic V2 profiles to see how the math works.</p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => loadProfile(25)} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
-              25 Yr Old
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => loadProfile('newHire')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+              Single (New Hire)
             </button>
-            <button onClick={() => loadProfile(40)} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
-              40 Yr Old
+            <button onClick={() => loadProfile('midCareer')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+              Single (Mid-Career)
             </button>
-            <button onClick={() => loadProfile(50)} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
-              50 Yr Old
+            <button onClick={() => loadProfile('family')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+              Family
+            </button>
+            <button onClick={() => loadProfile('complex')} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-900 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+              Complex Scenario
             </button>
           </div>
         </div>
@@ -221,7 +225,7 @@ function App() {
             <div className="text-right">
                 <span className={`text-sm font-bold ${isRunwayLow ? 'text-red-600' : 'text-emerald-600'}`}>
                   Liquid Cash: ${liquidCash.toLocaleString()} <br/> 
-                  <span className="opacity-70 font-medium">Required Burn: ${(monthlyMandatory).toLocaleString(undefined, {maximumFractionDigits: 0})}/mo</span>
+                  <span className="opacity-70 font-medium">Mandatory Spending: ${(monthlyMandatory).toLocaleString(undefined, {maximumFractionDigits: 0})}/mo</span>
                 </span>
                 {isRunwayLow && <p className="text-xs text-red-500 mt-2 font-bold animate-pulse">⚠️ Warning: Below 12-week minimum target.</p>}
                 {!isRunwayLow && <p className="text-xs text-emerald-600 mt-2 font-bold">✅ Healthy reserves.</p>}

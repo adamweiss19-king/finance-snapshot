@@ -1,15 +1,8 @@
-import React, { useState } from 'react';
-
-const formatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
+import React from 'react';
 
 function DebtManager({ data, setData }) {
   const addDebt = () => {
-    setData([...data, { id: Date.now(), name: '', balance: 0, interestRate: 0, annualPayment: 0 }]);
+    setData([...data, { id: Date.now(), name: '', balance: 0, interestRate: 0 }]);
   };
 
   const updateDebt = (id, field, value) => {
@@ -20,94 +13,69 @@ function DebtManager({ data, setData }) {
     setData(data.filter(d => d.id !== id));
   };
 
-  // THE MATH: Simple Annual Amortization
-  const totalInterest = data.reduce((acc, debt) => {
-    // A simplified yearly interest calculation: Balance * Rate
-    return acc + ((debt.balance || 0) * ((debt.interestRate || 0) / 100));
-  }, 0);
-
-  const totalPayments = data.reduce((acc, debt) => acc + (debt.annualPayment || 0), 0);
-  const currentTotalDebt = data.reduce((acc, debt) => acc + (debt.balance || 0), 0);
-  
-  // EOY Balance = Starting Balance + Interest - Payments
-  const totalEOYDebt = currentTotalDebt + totalInterest;
-
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800">Debt Manager</h2>
-        <button onClick={addDebt} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition">
-          + Add Debt
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-end mb-4 pr-1">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">Debt Manager</h2>
+          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Current Liabilities</p>
+        </div>
+        <button onClick={addDebt} className="text-red-600 hover:text-red-800 font-bold text-sm transition flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-lg">
+          + Add
         </button>
       </div>
 
       <div className="space-y-4">
         {data.map((debt) => (
-          <div key={debt.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border-b pb-4 border-gray-50">
-            <div className="md:col-span-1">
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Debt Name</label>
+          <div key={debt.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md relative group">
+            <div className="flex justify-between items-start border-b border-gray-50 pb-3 mb-3 gap-2">
               <input 
                 type="text" 
-                value={debt.name}
-                onChange={(e) => updateDebt(debt.id, 'name', e.target.value)}
-                placeholder="e.g. Car Loan"
-                className="w-full border-gray-300 rounded-md p-2 border focus:ring-red-500 focus:border-red-500"
+                value={debt.name} 
+                onChange={(e) => updateDebt(debt.id, 'name', e.target.value)} 
+                placeholder="e.g. Car Loan" 
+                className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
               />
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center text-right">
+                  <span className="text-lg font-black text-red-300 mr-1">$</span>
+                  <input 
+                    type="text" 
+                    value={debt.balance === 0 ? '' : debt.balance.toLocaleString('en-US')} 
+                    onChange={(e) => {
+                      const cleanValue = e.target.value.replace(/,/g, '');
+                      updateDebt(debt.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
+                    }} 
+                    placeholder="0"
+                    className="text-xl font-black text-red-600 border-none p-0 focus:ring-0 text-right w-32 bg-transparent placeholder-gray-200" 
+                  />
+                </div>
+                <span className="text-[9px] uppercase tracking-widest text-red-400 font-bold mr-1">Owed</span>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Current Balance</label>
-              <input 
-                type="number" 
-                value={debt.balance === 0 ? '' : debt.balance}
-                onChange={(e) => updateDebt(debt.id, 'balance', parseFloat(e.target.value) || 0)}
-                className="w-full border-gray-300 rounded-md p-2 border"
-              />
+
+            <div className="flex items-center justify-end gap-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-gray-400">Interest Rate:</span>
+                <div className="flex items-center gap-1">
+                  <input 
+                    type="number" 
+                    value={debt.interestRate === 0 ? '' : debt.interestRate} 
+                    onChange={(e) => updateDebt(debt.id, 'interestRate', parseFloat(e.target.value) || 0)} 
+                    className="w-16 text-right bg-slate-50 border border-slate-200 rounded p-1 text-xs text-slate-700 font-bold focus:ring-0" 
+                    placeholder="0"
+                  />
+                  <span className="font-bold text-slate-400">%</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Interest Rate %</label>
-              <input 
-                type="number" 
-                value={debt.interestRate === 0 ? '' : debt.interestRate}
-                onChange={(e) => updateDebt(debt.id, 'interestRate', parseFloat(e.target.value) || 0)}
-                className="w-full border-gray-300 rounded-md p-2 border"
-              />
-            </div>
-            <button onClick={() => removeDebt(debt.id)} className="text-gray-400 hover:text-red-600 text-sm font-medium pb-2 transition">
-              Remove
-            </button>
+
+            <button 
+              onClick={() => removeDebt(debt.id)} 
+              className="absolute -top-2 -right-2 bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
+            >✕</button>
           </div>
         ))}
-      </div>
-
-      {/* Summary Section */}
-      <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
-        <div className="flex justify-between items-center text-gray-600 text-sm">
-          <span>Starting Debt Total:</span>
-          <span className="font-semibold text-gray-800">{formatter.format(currentTotalDebt)}</span>
-        </div>
-        <div className="flex justify-between items-center text-gray-600 text-sm">
-          <span>Annual Interest Cost:</span>
-          <span className="font-semibold text-orange-600">+ {formatter.format(totalInterest)}</span>
-        </div>
-        <div className="flex justify-between items-center text-gray-600 text-sm">
-          <span>Total Scheduled Payments:</span>
-          <span className="font-semibold text-green-600">- {formatter.format(totalPayments)}</span>
-        </div>
-
-        <div className="flex justify-between items-center text-red-900 bg-red-50 p-4 rounded-xl border border-red-100 mt-4">
-          <div>
-            <span className="block text-xs uppercase font-bold tracking-wider opacity-70">Projected EOY Debt</span>
-            <span className="text-3xl font-black">{formatter.format(Math.max(0, totalEOYDebt))}</span>
-          </div>
-          <div className="text-right">
-             <span className="block text-xs font-bold text-red-600 uppercase">
-               Net Reduction
-             </span>
-             <span className="text-xl font-bold">
-               {formatter.format(Math.max(0, currentTotalDebt - totalEOYDebt))}
-             </span>
-          </div>
-        </div>
       </div>
     </div>
   );

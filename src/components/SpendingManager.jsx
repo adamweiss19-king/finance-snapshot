@@ -5,12 +5,12 @@ const formatter = new Intl.NumberFormat('en-US', {
 });
 
 const CATEGORIES = [
-  'Housing', 'Food', 'Transportation', 'Utilities', 'Insurance', 'Lifestyle & Fun', 'Other'
+  'Housing', 'Food', 'Transportation', 'Utilities', 'Insurance', 'Lifestyle & Fun', 'Family', 'Other'
 ];
 
 function SpendingManager({ data, setData }) {
   const addExpense = () => {
-    setData([...data, { id: Date.now(), name: '', category: 'Housing', amount: 0 }]);
+    setData([...data, { id: Date.now(), name: '', category: 'Housing', amount: 0, type: 'Mandatory' }]);
   };
 
   const updateExpense = (id, field, value) => {
@@ -24,68 +24,100 @@ function SpendingManager({ data, setData }) {
   const totalSpend = data.reduce((acc, item) => acc + (item.amount || 0), 0);
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <div className="flex justify-between items-center mb-6">
+    <div className="flex flex-col h-full">
+      {/* Header aligned with the other column managers */}
+      <div className="flex justify-between items-end mb-4 pr-1">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Living Expenses</h2>
-          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Categorized Spending</p>
+          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Cash Outflow</p>
         </div>
-        <button onClick={addExpense} className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm transition">
-          + Add Expense
+        <button onClick={addExpense} className="text-amber-600 hover:text-amber-800 font-bold text-sm transition flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-lg">
+          + Add
         </button>
       </div>
 
       <div className="space-y-4 mb-6">
-        {data.map((item) => (
-          <div key={item.id} className="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-            <div className="md:col-span-1">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Expense Name</label>
-              <input 
-                type="text" value={item.name} onChange={(e) => updateExpense(item.id, 'name', e.target.value)}
-                placeholder="e.g. Rent, Groceries" className="w-full border-gray-300 rounded-md p-2 border"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Category</label>
-              <select 
-                value={item.category} onChange={(e) => updateExpense(item.id, 'category', e.target.value)}
-                className="w-full border-gray-300 rounded-md p-2 border bg-white"
-              >
-                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Annual Amount</label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-gray-400">$</span>
+        {data.map((item) => {
+          const currentType = item.type || 'Mandatory';
+
+          return (
+            <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md relative group">
+              
+              {/* Top Row: Name and Amount */}
+              <div className="flex justify-between items-start border-b border-gray-50 pb-3 mb-3 gap-2">
                 <input 
-                  type="number" value={item.amount === 0 ? '' : item.amount} onChange={(e) => updateExpense(item.id, 'amount', parseFloat(e.target.value) || 0)}
-                  className="w-full border-gray-300 rounded-md p-2 pl-7 border"
+                  type="text" 
+                  value={item.name} 
+                  onChange={(e) => updateExpense(item.id, 'name', e.target.value)} 
+                  placeholder="e.g. Rent, Groceries" 
+                  className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
                 />
+                
+                <div className="flex flex-col items-end shrink-0">
+                  <div className="flex items-center text-right">
+                    <span className="text-lg font-black text-amber-300 mr-1">$</span>
+                    {/* Comma Formatted Amount Input */}
+                    <input 
+                      type="text" 
+                      value={item.amount === 0 ? '' : item.amount.toLocaleString('en-US')} 
+                      onChange={(e) => {
+                        const cleanValue = e.target.value.replace(/,/g, '');
+                        updateExpense(item.id, 'amount', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
+                      }} 
+                      placeholder="0"
+                      className="text-xl font-black text-amber-600 border-none p-0 focus:ring-0 text-right w-32 bg-transparent placeholder-gray-200" 
+                    />
+                  </div>
+                  <span className="text-[9px] uppercase tracking-widest text-amber-400 font-bold mr-1">/ Year</span>
+                </div>
               </div>
+
+              {/* Bottom Row: Category and Type Toggles */}
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                
+                {/* Visual Pill for Mandatory vs Discretionary */}
+                <select 
+                  value={currentType} 
+                  onChange={(e) => updateExpense(item.id, 'type', e.target.value)} 
+                  className={`border-none rounded-md px-2 py-1 text-[10px] font-bold tracking-wide uppercase focus:ring-0 cursor-pointer shadow-sm ${
+                    currentType === 'Mandatory' 
+                      ? 'bg-slate-800 text-white' 
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                  title="Expense Priority"
+                >
+                  <option value="Mandatory">Mandatory</option>
+                  <option value="Discretionary">Discretionary</option>
+                </select>
+
+                {/* Sub-category Dropdown */}
+               <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px] hidden sm:inline">Category:</span>
+                  <select 
+                    value={item.category} 
+                    onChange={(e) => updateExpense(item.id, 'category', e.target.value)} 
+                    className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 focus:ring-0 cursor-pointer max-w-[140px] truncate"
+                  >
+                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Hidden Remove Button (Shows on Hover) */}
+              <button 
+                onClick={() => removeExpense(item.id)} 
+                className="absolute -top-2 -right-2 bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
+              >✕</button>
             </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Type</label>
-              <select 
-                value={item.type || 'Mandatory'} 
-                onChange={(e) => updateExpense(item.id, 'type', e.target.value)}
-                className="w-full border-gray-300 rounded-md p-2 border bg-white"
-              >
-                <option value="Mandatory">Mandatory</option>
-                <option value="Discretionary">Discretionary</option>
-              </select>
-              </div>
-            <button onClick={() => removeExpense(item.id)} className="text-red-500 hover:text-red-700 text-sm font-medium pb-2 text-right">
-              Remove
-            </button>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center bg-gray-50 p-4 rounded-lg">
-        <span className="text-sm font-medium text-gray-600">Total Annual Spend:</span>
-        <span className="text-xl font-bold text-gray-900">{formatter.format(totalSpend)}</span>
-      </div>
+      {/* Modernized Total Footer */}
+    <div className="mt-auto flex justify-between items-center bg-amber-50 p-5 rounded-2xl border-2 border-amber-200 shadow-sm">
+      <span className="text-xs uppercase font-black tracking-widest text-amber-800">Total Burn</span>
+      <span className="text-2xl font-black text-amber-600">{formatter.format(totalSpend)}</span>
+    </div>
     </div>
   );
 }
