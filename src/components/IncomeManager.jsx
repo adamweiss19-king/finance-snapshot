@@ -44,23 +44,22 @@ function IncomeManager({ data, setData }) {
                 />
                 
                 <div className="flex flex-col items-end shrink-0">
-                  <div className="flex items-center text-right">
-                    <span className="text-lg font-black text-emerald-800 mr-1">$</span>
+                  <div className="flex items-center justify-end text-right">
+                    <span className="text-lg font-black text-emerald-700 mr-0.5">$</span>
                     <input 
-                      type="text" 
-                      value={item.gross === 0 ? '' : item.gross.toLocaleString('en-US')} 
+                      type="text"
+                      value={item.gross === 0 ? '' : item.gross.toLocaleString('en-US')}
                       onChange={(e) => {
                         const cleanValue = e.target.value.replace(/,/g, '');
                         updateIncome(item.id, 'gross', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
-                      }} 
+                      }}
                       placeholder="0"
-                      className="text-xl font-black text-emerald-800 border-none p-0 focus:ring-0 text-right w-32 bg-transparent placeholder-gray-200" 
+                      style={{ width: `${item.gross ? item.gross.toLocaleString('en-US').length + 0.5 : 2}ch` }}
+                      className="text-xl font-black text-emerald-700 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200" 
                     />
                   </div>
-                  <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold mr-1">Gross/Yr</span>
                 </div>
               </div>
-
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <select 
                   value={type} 

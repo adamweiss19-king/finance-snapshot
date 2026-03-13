@@ -5,12 +5,15 @@ const formatter = new Intl.NumberFormat('en-US', {
 });
 
 const CATEGORIES = [
-  'Housing', 'Food', 'Transportation', 'Utilities', 'Insurance', 'Lifestyle & Fun', 'Family', 'Other'
+  'Housing/Rent', 
+  'Card Expenses', 
+  'Check Expenses', 
+  'Other'
 ];
 
 function SpendingManager({ data, setData }) {
   const addExpense = () => {
-    setData([...data, { id: Date.now(), name: '', category: 'Housing', amount: 0, type: 'Mandatory' }]);
+    setData([...data, { id: Date.now(), name: '', category: 'Housing/Rent', amount: 0, type: 'Mandatory' }]);
   };
 
   const updateExpense = (id, field, value) => {
@@ -25,11 +28,13 @@ function SpendingManager({ data, setData }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header aligned with the other column managers */}
       <div className="flex justify-between items-end mb-4 pr-1">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Living Expenses</h2>
-          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Cash Outflow</p>
+          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Pure Cash Outflow</p>
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4 text-xs text-blue-800 shadow-sm">
+          <strong>💡 Pro-Tip:</strong> Don't track individual groceries or coffees! Just add up your total yearly Credit Card statements, Check/Debit outflows, and Housing costs for a faster snapshot.
+        </div>
         </div>
         <button onClick={addExpense} className="text-amber-600 hover:text-amber-800 font-bold text-sm transition flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-lg">
           + Add
@@ -43,39 +48,35 @@ function SpendingManager({ data, setData }) {
           return (
             <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md relative group">
               
-              {/* Top Row: Name and Amount */}
               <div className="flex justify-between items-start border-b border-gray-50 pb-3 mb-3 gap-2">
                 <input 
                   type="text" 
                   value={item.name} 
                   onChange={(e) => updateExpense(item.id, 'name', e.target.value)} 
-                  placeholder="e.g. Rent, Groceries" 
+                  placeholder="e.g. Rent, Groceries, HOA" 
                   className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
                 />
                 
                 <div className="flex flex-col items-end shrink-0">
-                  <div className="flex items-center text-right">
-                    <span className="text-lg font-black text-amber-300 mr-1">$</span>
-                    {/* Comma Formatted Amount Input */}
+                  <div className="flex items-center text-right justify-end">
+                    <span className="text-lg font-black text-amber-600 mr-0.5">$</span>
                     <input 
-                      type="text" 
-                      value={item.amount === 0 ? '' : item.amount.toLocaleString('en-US')} 
+                      type="text"
+                      value={item.amount === 0 ? '' : item.amount.toLocaleString('en-US')}
                       onChange={(e) => {
                         const cleanValue = e.target.value.replace(/,/g, '');
                         updateExpense(item.id, 'amount', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
-                      }} 
+                      }}
                       placeholder="0"
-                      className="text-xl font-black text-amber-600 border-none p-0 focus:ring-0 text-right w-32 bg-transparent placeholder-gray-200" 
+                      style={{ width: `${item.amount ? item.amount.toLocaleString('en-US').length + 0.5 : 2}ch` }}  
+                      className="text-xl font-black text-amber-600 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200" 
                     />
                   </div>
                   <span className="text-[9px] uppercase tracking-widest text-amber-400 font-bold mr-1">/ Year</span>
                 </div>
               </div>
 
-              {/* Bottom Row: Category and Type Toggles */}
               <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                
-                {/* Visual Pill for Mandatory vs Discretionary */}
                 <select 
                   value={currentType} 
                   onChange={(e) => updateExpense(item.id, 'type', e.target.value)} 
@@ -90,8 +91,7 @@ function SpendingManager({ data, setData }) {
                   <option value="Discretionary">Discretionary</option>
                 </select>
 
-                {/* Sub-category Dropdown */}
-               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px] hidden sm:inline">Category:</span>
                   <select 
                     value={item.category} 
@@ -103,7 +103,6 @@ function SpendingManager({ data, setData }) {
                 </div>
               </div>
 
-              {/* Hidden Remove Button (Shows on Hover) */}
               <button 
                 onClick={() => removeExpense(item.id)} 
                 className="absolute -top-2 -right-2 bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
@@ -113,11 +112,10 @@ function SpendingManager({ data, setData }) {
         })}
       </div>
 
-      {/* Modernized Total Footer */}
-    <div className="mt-auto flex justify-between items-center bg-amber-50 p-5 rounded-2xl border-2 border-amber-200 shadow-sm">
-      <span className="text-xs uppercase font-black tracking-widest text-amber-800">Total Burn</span>
-      <span className="text-2xl font-black text-amber-600">{formatter.format(totalSpend)}</span>
-    </div>
+      <div className="mt-auto flex justify-between items-center bg-amber-50 p-5 rounded-2xl border-2 border-amber-200 shadow-sm">
+        <span className="text-xs uppercase font-black tracking-widest text-amber-800">Total Burn</span>
+        <span className="text-2xl font-black text-amber-600">{formatter.format(totalSpend)}</span>
+      </div>
     </div>
   );
 }

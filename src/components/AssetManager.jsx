@@ -1,10 +1,12 @@
 import React from 'react';
 
-const ASSET_BUCKETS = ['Cash', 'Investment (Non-Retirement)', 'Retirement'];
-const ASSET_CATEGORIES = [
-  'Bank Account/Savings', '401k', 'IRA', 'Roth IRA', 
-  'Brokerage Account', 'HSA', 'FSA', 'Crypto', 'Other'
-];
+const ASSET_MAPPING = {
+  'Cash': ['Bank Account/Savings', 'FSA', 'Other'],
+  'Investment (Non-Retirement)': ['Brokerage Account', 'Crypto', 'HSA', 'Other'],
+  'Retirement': ['401k', 'IRA', 'Roth IRA', 'HSA', 'Other'],
+  'Physical Assets': ['Primary Residence', 'Vehicle', 'Real Estate (Rental)', 'Jewelry/Art', 'Other']
+};
+const ASSET_BUCKETS = Object.keys(ASSET_MAPPING);
 
 function AssetManager({ data, setData }) {
   const addAsset = () => {
@@ -16,6 +18,12 @@ function AssetManager({ data, setData }) {
     setData(data.map(a => a.id === id ? { ...a, [field]: value } : a));
   };
 
+  const handleBucketChange = (id, newBucket) => {
+    // When the bucket changes, we should also reset the category to the first option of the new bucket
+    const newCategory = ASSET_MAPPING[newBucket][0];
+    setData(data.map(a => a.id === id ? { ...a, bucket: newBucket, category: newCategory } : a));
+  }
+  
   const removeAsset = (id) => {
     setData(data.filter(a => a.id !== id));
   };
@@ -51,8 +59,8 @@ function AssetManager({ data, setData }) {
                   className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
                 />
                 <div className="flex flex-col items-end shrink-0">
-                  <div className="flex items-center text-right">
-                    <span className="text-lg font-black text-blue-300 mr-1">$</span>
+                  <div className="flex items-center justify-end text-right">
+                    <span className="text-lg font-black text-blue-300 mr-0.5">$</span>
                     <input 
                       type="text" 
                       value={asset.balance === 0 ? '' : asset.balance.toLocaleString('en-US')} 
@@ -60,7 +68,9 @@ function AssetManager({ data, setData }) {
                         const cleanValue = e.target.value.replace(/,/g, '');
                         updateAsset(asset.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
                       }} 
-                      className="text-xl font-black text-blue-700 border-none p-0 focus:ring-0 text-right w-32 bg-transparent placeholder-gray-200" 
+                      placeholder="0"
+                      style={{ width: `${asset.balance ? asset.balance.toLocaleString('en-US').length + 0.5 : 2}ch` }}
+                      className="text-xl font-black text-blue-700 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200" 
                     />
                   </div>
                   <span className="text-[9px] uppercase tracking-widest text-blue-400 font-bold mr-1">Balance</span>
@@ -73,14 +83,14 @@ function AssetManager({ data, setData }) {
                 {/* The Dropdown Group */}
                 <div className="flex items-center gap-2">
                   {/* 1. Macro Bucket */}
-                  <select 
-                    value={currentBucket} 
-                    onChange={(e) => updateAsset(asset.id, 'bucket', e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-[10px] font-bold tracking-wide uppercase text-white focus:ring-0 cursor-pointer max-w-[120px] truncate shadow-sm"
-                    title="Asset Macro Bucket"
-                  >
-                    {ASSET_BUCKETS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                 <select 
+                  value={currentBucket} 
+                  onChange={(e) => handleBucketChange(asset.id, e.target.value)} 
+                  className="bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-[10px] font-bold tracking-wide uppercase text-white focus:ring-0 cursor-pointer max-w-[120px] truncate shadow-sm"
+                >
+                  {/* This map function is what populates the list! */}
+                  {ASSET_BUCKETS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
 
                   {/* 2. Sub-Category */}
                   <select 
@@ -89,7 +99,9 @@ function AssetManager({ data, setData }) {
                     className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 focus:ring-0 cursor-pointer max-w-[140px] truncate"
                     title="Specific Account Type"
                   >
-                    {ASSET_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    {ASSET_MAPPING[currentBucket].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
 

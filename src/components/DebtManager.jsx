@@ -36,22 +36,22 @@ function DebtManager({ data, setData }) {
                 placeholder="e.g. Car Loan" 
                 className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
               />
-              <div className="flex flex-col items-end shrink-0">
-                <div className="flex items-center text-right">
-                  <span className="text-lg font-black text-red-300 mr-1">$</span>
-                  <input 
-                    type="text" 
-                    value={debt.balance === 0 ? '' : debt.balance.toLocaleString('en-US')} 
-                    onChange={(e) => {
-                      const cleanValue = e.target.value.replace(/,/g, '');
-                      updateDebt(debt.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
-                    }} 
-                    placeholder="0"
-                    className="text-xl font-black text-red-600 border-none p-0 focus:ring-0 text-right w-32 bg-transparent placeholder-gray-200" 
-                  />
-                </div>
-                <span className="text-[9px] uppercase tracking-widest text-red-400 font-bold mr-1">Owed</span>
+             <div className="flex flex-col items-end shrink-0">
+              <div className="flex items-center justify-end text-right">
+                <span className="text-lg font-black text-red-700 mr-0.5">$</span>
+                <input
+                  type="text"
+                  value={debt.balance === 0 ? '' : debt.balance.toLocaleString('en-US')}
+                  onChange={(e) => {
+                    const cleanValue = e.target.value.replace(/,/g, '');
+                    updateDebt(debt.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
+                  }}
+                  placeholder="0"
+                  style={{ width: `${debt.balance ? debt.balance.toLocaleString('en-US').length + 0.5 : 2}ch` }}
+                  className="text-xl font-black text-red-700 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200" 
+                />
               </div>
+            </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 text-xs">

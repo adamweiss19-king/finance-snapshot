@@ -50,22 +50,22 @@ function DebtContributionManager({ data, setData, debts }) {
                 
                 <div className="flex flex-col items-end shrink-0">
                   <div className="flex items-center text-right">
-                    <span className="text-lg font-black text-red-300 mr-1">$</span>
+                    <span className="text-lg font-black text-red-700 mr-0.5">$</span>
                     <input 
-                      type="text" 
-                      value={item.amount === 0 ? '' : item.amount.toLocaleString('en-US')} 
+                      type="text"
+                      value={item.amount === 0 ? '' : item.amount.toLocaleString('en-US')}
                       onChange={(e) => {
                         const cleanValue = e.target.value.replace(/,/g, '');
                         updateContribution(item.id, 'amount', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
-                      }} 
+                      }}
                       placeholder="0"
-                      className="text-xl font-black text-red-600 border-none p-0 focus:ring-0 text-right w-32 bg-transparent placeholder-gray-200" 
+                      style={{ width: `${item.amount ? item.amount.toLocaleString('en-US').length + 0.5 : 2}ch` }}  
+                      className="text-xl font-black text-red-700 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200" 
                     />
                   </div>
-                  <span className="text-[9px] uppercase tracking-widest text-red-400 font-bold mr-1">/ Year</span>
+                  <span className="text-[9px] uppercase tracking-widest text-red-400 font-bold mr-1">Amount</span>
                 </div>
               </div>
-
               {/* Bottom Row: Type Pill and Target Link */}
               <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
                 
