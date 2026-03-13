@@ -1,102 +1,108 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-const formatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 0, // Keeps it clean (no .00)
-  maximumFractionDigits: 0, 
-});
+const INCOME_TYPES = ['W-2 Salary', '1099', 'Bonus', 'Capital Gains', 'Interest/Dividends', 'Other'];
 
 function IncomeManager({ data, setData }) {
-  // 1. LOGIC: Functions to change the data
- // Update your logic functions to use 'setData' and 'data'
- const addIncome = () => {
-    const newIncome = { id: Date.now(), name: '', gross: 0, taxRate: 0 };
-    setData([...data, newIncome]);
+  const addIncome = () => {
+    setData([...data, { id: Date.now(), name: '', type: 'W-2 Salary', isTaxable: true, gross: 0, taxRate: 0 }]);
   };
 
   const updateIncome = (id, field, value) => {
-    const updated = data.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    );
-    setData(updated);
+    setData(data.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
   const removeIncome = (id) => {
     setData(data.filter(item => item.id !== id));
   };
 
-  // Update the math to use 'data' instead of 'incomes'
-  const totalNet = data.reduce((acc, item) => {
-    const net = (item.gross || 0) * (1 - (item.taxRate || 0) / 100);
-    return acc + net;
-  }, 0);
-
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800">Income Sources</h2>
-        <button 
-          onClick={addIncome}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition"
-        >
-          + Add Income
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-end mb-4 pr-1">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">Income Sources</h2>
+          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Cash Inflow</p>
+        </div>
+        <button onClick={addIncome} className="text-emerald-600 hover:text-emerald-800 font-bold text-sm transition flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg">
+          + Add
         </button>
       </div>
 
       <div className="space-y-4">
-        {data.map((item) => (
-          <div key={item.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border-b pb-4 border-gray-50">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Source Name</label>
-              <input 
-                type="text" 
-                value={item.name}
-                onChange={(e) => updateIncome(item.id, 'name', e.target.value)}
-                placeholder="e.g. Salary"
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 p-2 border"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Gross Amount</label>
-              <input 
-                type="number" 
-                value={item.gross === 0 ? '' : item.gross}
-                onChange={(e) => updateIncome(item.id, 'gross', parseFloat(e.target.value) || 0)}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 p-2 border"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Tax Rate (%)</label>
-              <input 
-                type="number" 
-                value={item.taxRate === 0 ? '' : item.taxRate}
-                onChange={(e) => updateIncome(item.id, 'taxRate', parseFloat(e.target.value) || 0)}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 p-2 border"
-              />
-            </div>
-            {/* The Live Formatting Column */}
-            <div className="text-right">
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Take Home</label>
-            <div className="p-2 text-green-700 font-bold">
-                {formatter.format(item.gross * (1 - (item.taxRate || 0) / 100))}
-            </div>
-            </div>
-            <button 
-              onClick={() => removeIncome(item.id)}
-              className="text-red-500 hover:text-red-700 text-sm font-medium pb-2 text-left"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
+        {data.map((item) => {
+          const isTaxable = item.isTaxable !== false; 
+          const type = item.type || 'W-2 Salary';
 
-      <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-        <span className="text-gray-600 font-medium">Estimated Annual Net Pay:</span>
-        <span className="text-2xl font-bold text-green-600">
-          {formatter.format(totalNet)}
-        </span>
+          return (
+            <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md relative group">
+              <div className="flex justify-between items-start border-b border-gray-50 pb-3 mb-3 gap-2">
+                <input 
+                  type="text" 
+                  value={item.name} 
+                  onChange={(e) => updateIncome(item.id, 'name', e.target.value)} 
+                  placeholder="e.g. Base Salary" 
+                  className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
+                />
+                
+                <div className="flex flex-col items-end shrink-0">
+                  <div className="flex items-center justify-end text-right">
+                    <span className="text-lg font-black text-emerald-700 mr-0.5">$</span>
+                    <input 
+                      type="text"
+                      value={item.gross === 0 ? '' : item.gross.toLocaleString('en-US')}
+                      onChange={(e) => {
+                        const cleanValue = e.target.value.replace(/,/g, '');
+                        updateIncome(item.id, 'gross', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
+                      }}
+                      placeholder="0"
+                      style={{ width: `${item.gross ? item.gross.toLocaleString('en-US').length + 0.5 : 2}ch` }}
+                      className="text-xl font-black text-emerald-700 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200" 
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <select 
+                  value={type} 
+                  onChange={(e) => updateIncome(item.id, 'type', e.target.value)} 
+                  className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 focus:ring-0 cursor-pointer max-w-[140px] truncate"
+                >
+                  {INCOME_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer group/toggle">
+                    <span className="font-semibold text-gray-400">Taxable</span>
+                    {/* GREEN THEMED TOGGLE */}
+                    <button 
+                      type="button"
+                      onClick={() => updateIncome(item.id, 'isTaxable', !isTaxable)}
+                      className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${isTaxable ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                    >
+                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isTaxable ? 'translate-x-4' : 'translate-x-1'}`} />
+                    </button>
+                  </label>
+
+                  <div className={`flex items-center gap-1 transition-opacity duration-300 ${isTaxable ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+                    {/* EXPANDED w-16 PERCENTAGE BOX */}
+                    <input 
+                      type="number" 
+                      value={item.taxRate === 0 ? '' : item.taxRate} 
+                      onChange={(e) => updateIncome(item.id, 'taxRate', parseFloat(e.target.value) || 0)} 
+                      className="w-16 text-right bg-slate-50 border border-slate-200 rounded p-1 text-xs text-slate-700 font-bold focus:ring-0" 
+                      placeholder="0"
+                    />
+                    <span className="font-bold text-slate-400">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => removeIncome(item.id)} 
+                className="absolute -top-2 -right-2 bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
+              >✕</button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
