@@ -324,6 +324,9 @@ const loadProfile = (profileName) => {
         discretionary={totalDiscretionary}
         investments={totalInvestments}
         unallocated={unallocatedCashFlow}
+        spendingData={spendingData}
+        assetContributions={assetContributions}
+        debtContributions={debtContributions}
       />
       
       {/* LEGAL DISCLAIMER */}

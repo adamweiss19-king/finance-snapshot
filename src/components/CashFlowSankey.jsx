@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Chart } from 'react-google-charts';
 
 const formatter = new Intl.NumberFormat('en-US', {
@@ -14,9 +14,14 @@ function CashFlowSankey({
   mandatory, 
   discretionary, 
   investments, 
-  unallocated 
+  unallocated, 
+  spendingData = [],
+  assetContributions = [],
+  debtContributions = []
 }) {
-  
+
+  const [isDetailed, setIsDetailed] = useState(false);
+
   // 1. Math Rounding
   const totalGross = Math.round(grossIncome);
   const totalNet = Math.round(netIncome);
@@ -42,12 +47,64 @@ function CashFlowSankey({
   const lblDeficit = getLabel('Deficit (Debt)', Math.abs(netUnallocated));
 
   // 3. Custom Tooltip String Generator (Exactly your requested format)
-  const tip = (from, to) => `${from} -> ${to}`;
+  const tip = (from, to) => `
+      <div style="padding:12px; font-family:sans-serif; border: 1px solid #e2e8f0; background:white; border-radius:8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+        <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:bold; letter-spacing:0.05em; margin-bottom:4px;">
+          Flowing from ${from.split(':')[0]}
+        </div>
+        <div style="font-size:14px; color:#0f172a; font-weight:bold;">
+          ${to}
+        </div>
+      </div>
+    `;
 
-  // 4. Build Data Array with a "Role: Tooltip" column
-  // This is the ONLY way to remove the "Weight" text in Google Charts
-  const data = [
-    ['From', 'To', 'Weight', { role: 'tooltip' }],
+// 4. The Bulletproof Color Map & Data Rows
+  const colorMap = {};
+  
+  // Assign Macro Colors
+  colorMap[lblGross] = '#22c55e'; // Green
+  colorMap[lblNet] = '#22c55e'; // Green
+  colorMap[lblTaxes] = '#f97316'; // Orange
+  colorMap[lblMandatory] = '#64748b'; // Slate
+  colorMap[lblDiscretionary] = '#64748b'; // Slate
+  colorMap[lblInvestments] = '#0ea5e9'; // Blue
+  colorMap[lblUnallocated] = '#0ea5e9'; // Blue
+  colorMap[lblDeficit] = '#ef4444'; // Red
+
+  const microDataRows = [];
+
+  // Map Spending (Slate Gray)
+  spendingData.forEach(item => {
+    if (item.amount > 0) {
+      const val = Math.round(item.amount);
+      const lbl = getLabel(item.name || item.category || 'Unnamed Expense', val);
+      colorMap[lbl] = '#64748b'; 
+      microDataRows.push([lblNet, lbl, val, tip(lblNet, lbl)]);
+    }
+  });
+
+  // Map Assets (Blue)
+  assetContributions.forEach(item => {
+    if (item.amount > 0) {
+      const val = Math.round(item.amount);
+      const lbl = getLabel(item.name || 'Unnamed Asset', val);
+      colorMap[lbl] = '#0ea5e9'; 
+      microDataRows.push([lblNet, lbl, val, tip(lblNet, lbl)]);
+    }
+  });
+
+  // Map Debt (Red)
+  debtContributions.forEach(item => {
+    if (item.amount > 0) {
+      const val = Math.round(item.amount);
+      const lbl = getLabel(item.name || 'Unnamed Debt', val);
+      colorMap[lbl] = '#ef4444'; 
+      microDataRows.push([lblNet, lbl, val, tip(lblNet, lbl)]);
+    }
+  });
+
+  const macroData = [
+    ['From', 'To', 'Weight', { type: 'string', role: 'tooltip', p: { html: true } }],
     ...(totalTaxes > 0 ? [[lblGross, lblTaxes, totalTaxes, tip(lblGross, lblTaxes)]] : []),
     ...(totalNet > 0 ? [[lblGross, lblNet, totalNet, tip(lblGross, lblNet)]] : []),
     ...(totalMandatory > 0 ? [[lblNet, lblMandatory, totalMandatory, tip(lblNet, lblMandatory)]] : []),
@@ -57,16 +114,39 @@ function CashFlowSankey({
     ...(netUnallocated < 0 ? [[lblDeficit, lblNet, Math.abs(netUnallocated), tip(lblDeficit, lblNet)]] : []),
   ];
 
+  const microData = [
+    ['From', 'To', 'Weight', { type: 'string', role: 'tooltip', p: { html: true } }],
+    ...(totalTaxes > 0 ? [[lblGross, lblTaxes, totalTaxes, tip(lblGross, lblTaxes)]] : []),
+    ...(totalNet > 0 ? [[lblGross, lblNet, totalNet, tip(lblGross, lblNet)]] : []),
+    ...microDataRows,
+    ...(netUnallocated > 0 ? [[lblNet, lblUnallocated, netUnallocated, tip(lblNet, lblUnallocated)]] : []),
+    ...(netUnallocated < 0 ? [[lblDeficit, lblNet, Math.abs(netUnallocated), tip(lblDeficit, lblNet)]] : []),
+  ];
+
+  // 5. Choose Chart Data
+  const finalChartData = isDetailed ? microData : macroData;
+
+  // 6. Apply Colors based on the exact Nodes rendered
+  const uniqueNodes = [];
+  finalChartData.slice(1).forEach(row => {
+    if (!uniqueNodes.includes(row[0])) uniqueNodes.push(row[0]);
+    if (!uniqueNodes.includes(row[1])) uniqueNodes.push(row[1]);
+  });
+
+  // Pull the color directly from our map, fallback to gray if something weird happens
+  const dynamicColors = uniqueNodes.map(node => colorMap[node] || '#cbd5e1');
+
   const options = {
+    tooltip: { isHtml: true },
     sankey: {
       node: {
-        colors: ['#1e293b', '#ef4444', '#0ea5e9', '#f59e0b', '#fbbf24', '#10b981', '#94a3b8'],
+        colors: dynamicColors, // Plugs in our smart color array       
         label: { fontName: 'Inter, system-ui, sans-serif', fontSize: 12, bold: true },
         nodePadding: 45,
         width: 20,
       },
       link: { 
-        colorMode: 'target', // Makes the link color solid based on the destination
+        colorMode: 'gradient',
         fillOpacity: 0.3 
       }
     }
@@ -74,9 +154,30 @@ function CashFlowSankey({
 
   return (
     <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mt-8 mb-12">
-      <div className="mb-8 border-b border-gray-50 pb-4">
-        <h3 className="text-xl font-black text-slate-800 tracking-tight italic">Financial Architecture</h3>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Flow Breakdown</p>
+      <div className="mb-8 border-b border-gray-50 pb-4 flex justify-between items-end">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-800">Financial Architecture</h3>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1">Flow Breakdown</p>
+        </div>
+
+        <div className="flex bg-slate-100 p-1 rounded-lg">
+          <button 
+            onClick={() => setIsDetailed(false)}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${
+              !isDetailed ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Macro
+          </button>
+          <button 
+            onClick={() => setIsDetailed(true)}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${
+              isDetailed ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Micro
+          </button>
+        </div>
       </div>
 
       {totalGross > 0 ? (
@@ -85,7 +186,7 @@ function CashFlowSankey({
             chartType="Sankey"
             width="100%"
             height="100%"
-            data={data}
+            data={finalChartData}
             options={options}
           />
         </div>
