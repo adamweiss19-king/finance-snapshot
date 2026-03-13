@@ -8,11 +8,14 @@ import DebtContributionManager from './components/DebtContributionManager'
 import ActionChecklist from './components/ActionChecklist';
 import CashFlowSankey from './components/CashFlowSankey';
 import { getDemoProfile } from './utils/demoProfiles';
+import { calculateTaxes } from './components/TaxEngine'; 
+import FoundationSummary from './components/FoundationSummary';
 
 function App() {
   // STATE 1: THE FOUNDATION 
   const [age, setAge] = useState(30);
   const [filingStatus, setFilingStatus] = useState('Single');
+  const [stateTaxLevel, setStateTaxLevel] = useState('Medium');
 
   const [incomeData, setIncomeData] = useState([
     { id: 1, name: 'Salary', gross: 100000, taxRate: 25, type: 'W-2 Salary', isTaxable: true }
@@ -59,13 +62,14 @@ const loadProfile = (profileName) => {
   const calcMandatory = (data) => data.reduce((acc, item) => acc + (item.type === 'Mandatory' ? (item.amount || 0) : 0), 0);
   const calcDiscretionary = (data) => data.reduce((acc, item) => acc + (item.type === 'Discretionary' ? (item.amount || 0) : 0), 0);
 
-  const totalNetIncome = incomeData.reduce((acc, item) => {
-    const effectiveTaxRate = item.isTaxable === false ? 0 : (item.taxRate || 0);
-    return acc + (item.gross * (1 - effectiveTaxRate / 100));
-  }, 0);
+  
   const getPct = (amount) => totalNetIncome > 0 ? Math.round((amount / totalNetIncome) * 100) : 0;
 
-  const totalGrossIncome = incomeData.reduce((acc, item) => acc + (item.gross || 0), 0);
+  const totalGrossIncome = incomeData.reduce((acc, item) => acc + (Number(item.gross) || 0), 0);
+  const taxReceipt = calculateTaxes(incomeData, filingStatus, stateTaxLevel);
+  const totalTaxes = taxReceipt.totalTax;
+  const totalNetIncome = totalGrossIncome - totalTaxes;
+
 
   // Calculate the new buckets
   const totalMandatory = calcMandatory(spendingData) + calcMandatory(debtContributions);
@@ -175,6 +179,20 @@ const loadProfile = (profileName) => {
               <option value="Head of Household">Head of Household</option>
             </select>
           </div>
+
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">State Tax Level</label>
+            <select 
+              value={stateTaxLevel} 
+              onChange={(e) => setStateTaxLevel(e.target.value)} 
+              className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+            >
+              <option value="None">None (0%)</option>
+              <option value="Low">Low (Approx)</option>
+              <option value="Medium">Medium (Approx)</option>
+              <option value="High">High (Approx)</option>
+            </select>
+          </div>
         </div>
 
         {/* SECTION 1: THE FOUNDATION */}
@@ -189,7 +207,12 @@ const loadProfile = (profileName) => {
             <DebtManager data={debtData} setData={setDebtData} assets={assetData} />
           </div>
         </div>
-
+        <FoundationSummary 
+          incomeData={incomeData}
+          taxReceipt={taxReceipt}
+          totalInvestments={totalInvestments}
+          debtContributions={debtContributions}
+        />
         {/* SECTION 2: THE ACTION PLAN */}
         <div className="mb-6 border-b border-gray-200 pb-4">
           <h2 className="text-3xl font-extrabold text-gray-900">Section 2: The Action Plan</h2>
@@ -324,6 +347,8 @@ const loadProfile = (profileName) => {
         discretionary={totalDiscretionary}
         investments={totalInvestments}
         unallocated={unallocatedCashFlow}
+        incomeData={incomeData}
+        taxReceipt={taxReceipt}
         spendingData={spendingData}
         assetContributions={assetContributions}
         debtContributions={debtContributions}
