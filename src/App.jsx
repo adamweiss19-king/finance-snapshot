@@ -8,8 +8,10 @@ import DebtContributionManager from './components/DebtContributionManager'
 import ActionChecklist from './components/ActionChecklist';
 import CashFlowSankey from './components/CashFlowSankey';
 import { getDemoProfile } from './utils/demoProfiles';
-import { calculateTaxes } from './components/TaxEngine'; 
+import { calculateTaxes } from './utils/taxEngine';
 import FoundationSummary from './components/FoundationSummary';
+import AllocationSummary from './components/AllocationSummary';
+import NetWorthProjection from './components/NetWorthProjection';
 
 function App() {
   // STATE 1: THE FOUNDATION 
@@ -207,12 +209,12 @@ const loadProfile = (profileName) => {
             <DebtManager data={debtData} setData={setDebtData} assets={assetData} />
           </div>
         </div>
-        <FoundationSummary 
-          incomeData={incomeData}
-          taxReceipt={taxReceipt}
-          totalInvestments={totalInvestments}
-          debtContributions={debtContributions}
-        />
+          <FoundationSummary 
+            incomeData={incomeData}
+            taxReceipt={taxReceipt}
+            totalInvestments={totalInvestments}
+            debtContributions={debtContributions}
+          />
         {/* SECTION 2: THE ACTION PLAN */}
         <div className="mb-6 border-b border-gray-200 pb-4">
           <h2 className="text-3xl font-extrabold text-gray-900">Section 2: The Action Plan</h2>
@@ -234,7 +236,9 @@ const loadProfile = (profileName) => {
 
         {/* The Action Managers */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
-          <SpendingManager data={spendingData} setData={setSpendingData} />          
+          <SpendingManager 
+          data={spendingData} setData={setSpendingData} 
+          />          
           <AssetContributionManager 
             data={assetContributions} 
             setData={setAssetContributions} 
@@ -242,92 +246,32 @@ const loadProfile = (profileName) => {
             age={age} 
             filingStatus={filingStatus} 
           />
-          <DebtContributionManager data={debtContributions} setData={setDebtContributions} debts={debtData} />
+          <DebtContributionManager 
+            data={debtContributions} 
+            setData={setDebtContributions} 
+            debts={debtData} 
+          />
         </div>
 
         {/* SECTION 2 SUMMARY: ACTION SUMMARY */}
-        <div className="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-          <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4">Cash Flow Allocation Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <span className="block text-xs uppercase font-bold tracking-widest text-slate-500 mb-2">Mandatory</span>
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-black text-slate-700">${totalMandatory.toLocaleString()}</span>
-                <span className="text-lg font-bold text-slate-400">{getPct(totalMandatory)}%</span>
-              </div>
-            </div>
-            
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <span className="block text-xs uppercase font-bold tracking-widest text-slate-500 mb-2">Discretionary</span>
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-black text-slate-700">${totalDiscretionary.toLocaleString()}</span>
-                <span className="text-lg font-bold text-slate-400">{getPct(totalDiscretionary)}%</span>
-              </div>
-            </div>
-            
-            <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-              <span className="block text-xs uppercase font-bold tracking-widest text-blue-500 mb-2">Investments</span>
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-black text-blue-700">${totalInvestments.toLocaleString()}</span>
-                <span className="text-lg font-bold text-blue-400">{getPct(totalInvestments)}%</span>
-              </div>
-            </div>
-          </div>
+        <AllocationSummary 
+          totalNetIncome={totalNetIncome}
+          totalMandatory={totalMandatory}
+          totalDiscretionary={totalDiscretionary}
+          totalInvestments={totalInvestments}
+          runwayMonths={runwayMonths}
+          liquidCash={liquidCash}
+          monthlyMandatory={monthlyMandatory}
+          isRunwayLow={isRunwayLow}
+        />
 
-          {/* EMERGENCY FUND RUNWAY VISUAL */}
-          <div className={`mt-6 p-5 rounded-xl border flex justify-between items-center transition-colors duration-500 ${isRunwayLow ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-            <div>
-              <span className={`block text-xs uppercase font-bold tracking-widest ${isRunwayLow ? 'text-red-500' : 'text-emerald-600'}`}>
-                Emergency Runway
-              </span>
-              <span className={`text-3xl font-black ${isRunwayLow ? 'text-red-700' : 'text-emerald-700'}`}>
-                {runwayMonths.toFixed(1)} Months
-              </span>
-            </div>
-            <div className="text-right">
-                <span className={`text-sm font-bold ${isRunwayLow ? 'text-red-600' : 'text-emerald-600'}`}>
-                  Liquid Cash: ${liquidCash.toLocaleString()} <br/> 
-                  <span className="opacity-70 font-medium">Mandatory Spending: ${(monthlyMandatory).toLocaleString(undefined, {maximumFractionDigits: 0})}/mo</span>
-                </span>
-                {isRunwayLow && <p className="text-xs text-red-500 mt-2 font-bold animate-pulse">⚠️ Warning: Below 12-week minimum target.</p>}
-                {!isRunwayLow && <p className="text-xs text-emerald-600 mt-2 font-bold">✅ Healthy reserves.</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* OVERALL SUMMARY WITH THE NEW PHASE 2.5 GROWTH SPLIT */}
-        <div className="mb-12 bg-slate-900 p-8 rounded-2xl text-white shadow-2xl border border-slate-700">
-          <div className="mb-6 border-b border-slate-700 pb-4">
-            <h2 className="text-2xl font-black text-white">Year-End Net Worth Projection</h2>
-            <p className="text-slate-400 text-sm mt-1">
-              *Contributions assume 0% growth in Year 1. Debt payments are mathematically capped at the total payoff amount.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col justify-center">
-              <p className="text-slate-400 text-xs uppercase font-bold tracking-widest">Current Net Worth (Jan 1)</p>
-              <p className="text-4xl font-black mt-2">${currentNetWorth.toLocaleString()}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-blue-900 to-slate-800 p-6 rounded-xl border border-blue-800 shadow-inner">
-              <p className="text-blue-300 text-xs uppercase font-bold tracking-widest">Projected Net Worth (Dec 31)</p>
-              <p className="text-5xl font-black text-white mt-2 mb-4">${projectedNetWorth.toLocaleString()}</p>
-              
-              {/* THE NEW PHASE 2.5 GROWTH BREAKDOWN */}
-              <div className="pt-4 border-t border-blue-800/50 space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-blue-200">Total Cash Added (To Assets & Debt):</span>
-                  <span className="font-bold text-white">+ ${(totalCashAddedToAssets + effectiveDebtPayments).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-blue-200">Expected Market Growth:</span>
-                  <span className="font-bold text-green-400">+ ${totalMarketGrowth.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <NetWorthProjection
+          currentNetWorth={currentNetWorth}
+          projectedNetWorth={projectedNetWorth}
+          totalCashAddedToAssets={totalCashAddedToAssets}
+          effectiveDebtPayments={effectiveDebtPayments}
+          totalMarketGrowth={totalMarketGrowth}
+        />
 
         {/* SECTION 3: THE EXECUTION PLAN */}
         <ActionChecklist 
