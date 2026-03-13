@@ -3,15 +3,20 @@ import IncomeManager from './components/IncomeManager'
 import AssetManager from './components/AssetManager'
 import DebtManager from './components/DebtManager'
 import SpendingManager from './components/SpendingManager'
+import UnallocatedCashTracker from './components/UnallocatedCashTracker'
 import AssetContributionManager from './components/AssetContributionManager'
 import DebtContributionManager from './components/DebtContributionManager'
 import ActionChecklist from './components/ActionChecklist';
 import CashFlowSankey from './components/CashFlowSankey';
 import { getDemoProfile } from './utils/demoProfiles';
+import projectionEngine from './utils/projectionEngine';
 import { calculateTaxes } from './utils/taxEngine';
 import FoundationSummary from './components/FoundationSummary';
 import AllocationSummary from './components/AllocationSummary';
 import NetWorthProjection from './components/NetWorthProjection';
+
+
+
 
 function App() {
   // STATE 1: THE FOUNDATION 
@@ -43,7 +48,7 @@ function App() {
   ]);
 
   // DEMO PROFILES LOADER (Fixed to pull the correct profile data keys)
-const loadProfile = (profileName) => {
+  const loadProfile = (profileName) => {
     const profile = getDemoProfile(profileName);
     if (profile) {
       setAge(profile.age || 30);
@@ -64,20 +69,15 @@ const loadProfile = (profileName) => {
   const calcMandatory = (data) => data.reduce((acc, item) => acc + (item.type === 'Mandatory' ? (item.amount || 0) : 0), 0);
   const calcDiscretionary = (data) => data.reduce((acc, item) => acc + (item.type === 'Discretionary' ? (item.amount || 0) : 0), 0);
 
-  
-  const getPct = (amount) => totalNetIncome > 0 ? Math.round((amount / totalNetIncome) * 100) : 0;
-
   const totalGrossIncome = incomeData.reduce((acc, item) => acc + (Number(item.gross) || 0), 0);
   const taxReceipt = calculateTaxes(incomeData, filingStatus, stateTaxLevel);
   const totalTaxes = taxReceipt.totalTax;
   const totalNetIncome = totalGrossIncome - totalTaxes;
 
-
   // Calculate the new buckets
   const totalMandatory = calcMandatory(spendingData) + calcMandatory(debtContributions);
   const totalDiscretionary = calcDiscretionary(spendingData) + calcDiscretionary(debtContributions);
   const totalInvestments = calcTotal(assetContributions); 
-
   const totalSpending = calcTotal(spendingData);
   const totalContributionsAmount = calcTotal(assetContributions);
 
@@ -87,56 +87,25 @@ const loadProfile = (profileName) => {
   const runwayMonths = monthlyMandatory > 0 ? (liquidCash / monthlyMandatory) : 0;
   const isRunwayLow = runwayMonths < 2.76; 
 
-  // --- THE SMART MATH ENGINE ---
-
-  // 1. Asset EOY Calculation (Now split for Returns vs Contributions)
-  let totalAssetEOY = 0;
-  let totalMarketGrowth = 0;
-  let totalCashAddedToAssets = 0;
-
-  assetData.forEach(asset => {
-    const growthAmount = asset.balance * ((asset.growth || 0) / 100);
-    const baseEOY = asset.balance + growthAmount;
-    
-    const linkedContributions = assetContributions
-      .filter(c => String(c.linkedId) === String(asset.id))
-      .reduce((sum, c) => sum + (c.amount || 0), 0);
-    
-    totalMarketGrowth += growthAmount;
-    totalCashAddedToAssets += linkedContributions;
-    totalAssetEOY += baseEOY + linkedContributions;
+ // --- THE SMART MATH ENGINE ---
+  const projections = calculateProjections({
+    assetData,
+    debtData,
+    assetContributions,
+    debtContributions,
+    totalNetIncome,
+    totalSpending,
+    totalContributionsAmount
   });
 
-  const unlinkedContributions = assetContributions
-    .filter(c => c.linkedId === 'new' || !c.linkedId)
-    .reduce((sum, c) => sum + (c.amount || 0), 0);
-  
-  totalCashAddedToAssets += unlinkedContributions;
-  totalAssetEOY += unlinkedContributions;
-
-  // 2. Debt EOY Calculation
-  let totalDebtEOY = 0;
-  let effectiveDebtPayments = 0; 
-
-  debtData.forEach(debt => {
-    const baseEOY = debt.balance + (debt.balance * ((debt.interestRate || 0) / 100));
-    const linkedPayments = debtContributions
-      .filter(p => String(p.linkedId) === String(debt.id))
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-    if (linkedPayments > baseEOY) {
-      effectiveDebtPayments += baseEOY; 
-      totalDebtEOY += 0;                
-    } else {
-      effectiveDebtPayments += linkedPayments;
-      totalDebtEOY += (baseEOY - linkedPayments);
-    }
-  });
-
-  // 3. Final Cash Flow & Net Worth
-  const unallocatedCashFlow = totalNetIncome - totalSpending - totalContributionsAmount - effectiveDebtPayments;
-  const projectedNetWorth = totalAssetEOY - totalDebtEOY;
-  const currentNetWorth = assetData.reduce((acc, a) => acc + (a.balance||0), 0) - debtData.reduce((acc, d) => acc + (d.balance||0), 0);
+  const {
+    totalMarketGrowth,
+    totalCashAddedToAssets,
+    effectiveDebtPayments,
+    unallocatedCashFlow,
+    currentNetWorth,
+    projectedNetWorth
+  } = projections;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-gray-900 flex flex-col">
@@ -222,17 +191,10 @@ const loadProfile = (profileName) => {
         </div>
         
         {/* FLOATING UNALLOCATED CASH ROW */}
-        <div className="flex justify-end mb-6">
-          <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 text-right shadow-lg min-w-[280px]">
-            <span className="block text-xs uppercase font-bold tracking-widest text-slate-400 mb-2">Unallocated Cash</span>
-            <div className="flex justify-end items-baseline gap-3">
-              <span className={`text-4xl font-black tracking-tight ${unallocatedCashFlow >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                ${unallocatedCashFlow.toLocaleString()}
-              </span>
-              <span className="text-xl font-bold text-slate-400">{getPct(unallocatedCashFlow)}%</span>
-            </div>
-          </div>
-        </div>
+          <UnallocatedCashTracker 
+            unallocatedCashFlow={unallocatedCashFlow} 
+            totalNetIncome={totalNetIncome} 
+          />
 
         {/* The Action Managers */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
@@ -283,20 +245,19 @@ const loadProfile = (profileName) => {
           foundationDebts={debtData}
         />
       </div>
-      
-      <CashFlowSankey 
-        grossIncome={totalGrossIncome}
-        netIncome={totalNetIncome}
-        mandatory={totalMandatory}
-        discretionary={totalDiscretionary}
-        investments={totalInvestments}
-        unallocated={unallocatedCashFlow}
-        incomeData={incomeData}
-        taxReceipt={taxReceipt}
-        spendingData={spendingData}
-        assetContributions={assetContributions}
-        debtContributions={debtContributions}
-      />
+        <CashFlowSankey 
+          grossIncome={totalGrossIncome}
+          netIncome={totalNetIncome}
+          mandatory={totalMandatory}
+          discretionary={totalDiscretionary}
+          investments={totalInvestments}
+          unallocated={unallocatedCashFlow}
+          incomeData={incomeData}
+          taxReceipt={taxReceipt}
+          spendingData={spendingData}
+          assetContributions={assetContributions}
+          debtContributions={debtContributions}
+        />
       
       {/* LEGAL DISCLAIMER */}
       <footer className="mt-12 mb-8 text-center text-xs text-slate-400 max-w-3xl mx-auto">
