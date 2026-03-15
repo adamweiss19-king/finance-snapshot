@@ -1,4 +1,4 @@
-// utils/projectionEngine.js
+import React from 'react';
 
 export function calculateProjections({
   assetData,

@@ -12,7 +12,7 @@ function NetWorthProjection({
       <div className="mb-6 border-b border-slate-700 pb-4">
         <h2 className="text-2xl font-black text-white">Year-End Net Worth Projection</h2>
         <p className="text-slate-400 text-sm mt-1">
-          *Contributions assume 0% growth in Year 1. Debt payments are mathematically capped at the total payoff amount.
+          How your allocations will change your net worth by December 31st.<br ></br> Contributions assume 0% growth in Year 1. Debt payments are mathematically capped at the total payoff amount.
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -9,7 +9,7 @@ import DebtContributionManager from './components/DebtContributionManager'
 import ActionChecklist from './components/ActionChecklist';
 import CashFlowSankey from './components/CashFlowSankey';
 import { getDemoProfile } from './utils/demoProfiles';
-import projectionEngine from './utils/projectionEngine';
+import { calculateProjections } from './utils/projectionEngine';
 import { calculateTaxes } from './utils/taxEngine';
 import FoundationSummary from './components/FoundationSummary';
 import AllocationSummary from './components/AllocationSummary';
@@ -82,10 +82,29 @@ function App() {
   const totalContributionsAmount = calcTotal(assetContributions);
 
   // --- EMERGENCY RUNWAY MATH ---
-  const liquidCash = assetData.filter(a => a.bucket === 'Cash' || a.category === 'Bank Account/Savings').reduce((acc, a) => acc + (a.balance || 0), 0);  
+ // 1. Current Cash
+  const liquidCash = assetData
+    .filter(a => a.bucket === 'Cash' || a.category === 'Bank Account/Savings')
+    .reduce((acc, a) => acc + (a.balance || 0), 0);  
+
+  // 2. Projected Cash (Adding linked contributions)
+  const projectedCashContributions = assetContributions.reduce((sum, c) => {
+    const linkedAsset = assetData.find(a => String(a.id) === String(c.linkedId));
+    if (linkedAsset && (linkedAsset.bucket === 'Cash' || linkedAsset.category === 'Bank Account/Savings')) {
+      return sum + (Number(c.amount) || 0);
+    }
+    return sum;
+  }, 0);
+
+  const projectedLiquidCash = liquidCash + projectedCashContributions;
   const monthlyMandatory = totalMandatory / 12;
-  const runwayMonths = monthlyMandatory > 0 ? (liquidCash / monthlyMandatory) : 0;
-  const isRunwayLow = runwayMonths < 2.76; 
+
+  // 3. Calculate Runways
+  const currentRunwayMonths = monthlyMandatory > 0 ? (liquidCash / monthlyMandatory) : 0;
+  const projectedRunwayMonths = monthlyMandatory > 0 ? (projectedLiquidCash / monthlyMandatory) : 0;
+  
+  // We base the warning on the PROJECTED end-of-year health!
+  const isRunwayLow = projectedRunwayMonths < 2.76;
 
  // --- THE SMART MATH ENGINE ---
   const projections = calculateProjections({
@@ -221,8 +240,10 @@ function App() {
           totalMandatory={totalMandatory}
           totalDiscretionary={totalDiscretionary}
           totalInvestments={totalInvestments}
-          runwayMonths={runwayMonths}
+          currentRunwayMonths={currentRunwayMonths}   
+          projectedRunwayMonths={projectedRunwayMonths}
           liquidCash={liquidCash}
+          projectedLiquidCash={projectedLiquidCash}
           monthlyMandatory={monthlyMandatory}
           isRunwayLow={isRunwayLow}
         />

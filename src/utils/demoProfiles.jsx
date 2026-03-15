@@ -35,7 +35,6 @@ export const demoProfiles = {
       { id: 101, name: 'Ally High Yield Savings', bucket: 'Cash', category: 'Bank Account/Savings', balance: 15000, growth: 4 },
       { id: 102, name: 'Vanguard 401(k)', bucket: 'Retirement', category: '401k', balance: 65000, growth: 7 },
       { id: 103, name: 'Vanguard Roth IRA', bucket: 'Retirement', category: 'Roth IRA', balance: 22000, growth: 7 },
-      { id: 104, name: 'Honda Civic', bucket: 'Physical Assets', category: 'Vehicle', balance: 18000, growth: -10 }
     ],
     debtData: [
       { id: 201, name: 'Honda Auto Loan', balance: 12000, interestRate: 6.0, linkedAssetId: '104' }
