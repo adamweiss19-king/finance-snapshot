@@ -4,8 +4,7 @@ const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0,
 });
 
-function AssetContributionManager({ data, setData, assets, age, filingStatus }) {
-  const addContribution = () => {
+function AssetContributionManager({ data, setData, assets, age, filingStatus, onCreateLinkedAsset }) {  const addContribution = () => {
     setData([...data, { id: Date.now(), name: '', amount: 0, linkedId: 'new' }]);
   };
 
@@ -125,6 +124,7 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus }) 
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex flex-col gap-2 w-full mt-2">
               <div className="flex items-center gap-2 w-full">
                 <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Destination:</span>
                 <select 
@@ -138,6 +138,17 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus }) 
                   ))}
                 </select>
               </div>
+              
+              {/* THE NEW AUTO-CREATE BUTTON */}
+              {(!item.linkedId || item.linkedId === 'new') && (
+                <button 
+                  onClick={() => onCreateLinkedAsset(item.id, item.name)}
+                  className="w-full text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 py-1.5 rounded-md transition-colors shadow-sm"
+                >
+                  + Create $0 Account in Foundation
+                </button>
+              )}
+            </div>
             </div>
 
             <button 

@@ -131,36 +131,24 @@ const handleLoadSnapshot = (selectedYear) => {
     }
   };
 
-  const confirmCloseOut = () => {
-    // 1. Create a version of the data where "isNew" assets are reset to $0 for the Actuals report
-    const actualAssetData = assetData.map(asset => 
-      asset.isNew ? { ...asset, balance: 0 } : asset
-    );
-    const actualDebtData = debtData.map(debt => 
-      debt.isNew ? { ...debt, balance: 0 } : debt
-    );
-
+ const confirmCloseOut = () => {
+    // Grab exactly what is currently on the screen (the actuals you just reviewed/typed)
     const fullState = { 
       age, filingStatus, stateTaxLevel, 
-      incomeData, 
-      assetData: actualAssetData, // Use the reset assets
-      debtData: actualDebtData,   // Use the reset debts
-      spendingData, 
-      assetContributions, 
-      debtContributions 
+      incomeData, assetData, debtData, 
+      spendingData, assetContributions, debtContributions 
     };
     
+    // Save it to the 'actuals' folder and lock the year
     const updatedSnapshots = saveSnapshot(activeYear, fullState, 'actuals', 'closed');
     setSnapshots(updatedSnapshots);
     
-    // UI Updates
-    setAssetData(actualAssetData);
-    setDebtData(actualDebtData);
+    // Update the UI state
     setIsLocked(true);
     setViewingType('actuals');
     setIsClosingOut(false);
     
-    alert(`🔒 ${activeYear} closed! New accounts have been reset to $0 for your final reporting.`);
+    alert(`🔒 ${activeYear} successfully closed out! Your Actuals are now locked in.`);
   };
 
   const startNextYear = () => {
@@ -180,6 +168,45 @@ const handleLoadSnapshot = (selectedYear) => {
     setIsLocked(false);
     setViewingType('plan');
     alert(`🎉 Welcome to ${nextYear}! Your starting balances have been pulled from ${activeYear}'s final actuals. You can now adjust your Action Plan.`);
+  };
+
+const createLinkedAsset = (contributionId, contributionName) => {
+    const newAssetId = Date.now(); 
+    
+    // 1. Create the new asset with a $0 balance
+    const newAsset = { 
+      id: newAssetId, 
+      name: contributionName || 'New Investment Account', 
+      bucket: 'Investment (Non-Retirement)', 
+      category: 'Brokerage Account', 
+      balance: 0, 
+      growth: 7 // Default expected growth
+    };
+    setAssetData([...assetData, newAsset]);
+    
+    // 2. Link the contribution to this newly created asset
+    setAssetContributions(assetContributions.map(c => 
+      c.id === contributionId ? { ...c, linkedId: newAssetId } : c
+    ));
+  };
+
+  const createLinkedDebt = (contributionId, contributionName) => {
+    const newDebtId = Date.now(); 
+    
+    // 1. Create the new debt with a $0 balance
+    const newDebt = { 
+      id: newDebtId, 
+      name: contributionName || 'New Liability', 
+      balance: 0, 
+      interestRate: 0, // Default
+      linkedAssetId: '' // Default unlinked to physical asset
+    };
+    setDebtData([...debtData, newDebt]);
+    
+    // 2. Link the payment to this newly created debt
+    setDebtContributions(debtContributions.map(c => 
+      c.id === contributionId ? { ...c, linkedId: newDebtId } : c
+    ));
   };
 
   // MATH HELPERS
@@ -304,20 +331,17 @@ const handleLoadSnapshot = (selectedYear) => {
               {/* If OPEN and NOT closing out */}
               {activeYear !== 'Current Workspace' && !isLocked && snapshots[activeYear]?.status === 'open' && !isClosingOut && (
                 <>
-                  <button onClick={handleSmartSave} className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
-                    Update Plan
-                  </button>
-                  <button 
+                 <button 
                     onClick={() => {
-                      // 1. Prep the data: Find 'New' accounts and zero them out immediately
-                      const preppedAssets = assetData.map(a => a.isNew ? { ...a, balance: 0 } : a);
-                      const preppedDebts = debtData.map(d => d.isNew ? { ...d, balance: 0 } : d);
+                      // 1. Wipe the live balances to $0 so the input boxes are empty
+                      // This allows the HTML placeholder (the Target) to show through!
+                      const clearedAssets = assetData.map(a => ({ ...a, balance: 0 }));
+                      const clearedDebts = debtData.map(d => ({ ...d, balance: 0 }));
                       
-                      // 2. Update the live state so the user sees $0 on the screen
-                      setAssetData(preppedAssets);
-                      setDebtData(preppedDebts);
+                      setAssetData(clearedAssets);
+                      setDebtData(clearedDebts);
                       
-                      // 3. Enter the close-out view
+                      // 2. Enter Review Mode
                       setIsClosingOut(true);
                     }} 
                     className="bg-red-500 hover:bg-red-400 text-white font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2"
@@ -422,8 +446,10 @@ const handleLoadSnapshot = (selectedYear) => {
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <IncomeManager data={incomeData} setData={setIncomeData} />
-                <AssetManager data={assetData} setData={setAssetData} />
-                <DebtManager data={debtData} setData={setDebtData} assets={assetData} />
+                <AssetManager data={assetData} setData={setAssetData} 
+                isClosingOut={isClosingOut} contributions={assetContributions} planSnapshot={snapshots[activeYear]?.plan}/>
+                <DebtManager data={debtData} setData={setDebtData} assets={assetData} 
+                isClosingOut={isClosingOut} contributions={debtContributions} planSnapshot={snapshots[activeYear]?.plan} />
               </div>
 
               {/* CLOSE OUT CONFIRMATION BOX */}
@@ -464,7 +490,8 @@ const handleLoadSnapshot = (selectedYear) => {
                 {/* The Action Managers */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
                   <SpendingManager data={spendingData} setData={setSpendingData} />          
-                  <AssetContributionManager data={assetContributions} setData={setAssetContributions} assets={assetData} age={age} filingStatus={filingStatus} />
+                  <AssetContributionManager data={assetContributions} setData={setAssetContributions} assets={assetData} age={age} 
+                    filingStatus={filingStatus} onCreateLinkedAsset={createLinkedAsset} />
                   <DebtContributionManager data={debtContributions} setData={setDebtContributions} debts={debtData} />
                 </div>
 
