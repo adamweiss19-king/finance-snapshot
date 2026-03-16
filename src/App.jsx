@@ -16,6 +16,7 @@ import AllocationSummary from './components/AllocationSummary';
 import NetWorthProjection from './components/NetWorthProjection';
 import { getSnapshots, saveSnapshot } from './utils/storageEngine';
 import HistoryTable from './components/HistoryTable';
+import ExecutionScorecard from './components/ExecutionScorecard';
 
 
 
@@ -23,8 +24,13 @@ import HistoryTable from './components/HistoryTable';
 function App() {
   const [snapshots, setSnapshots] = useState(() => getSnapshots());
   const [activeYear, setActiveYear] = useState('Current');
-  const [currentView, setCurrentView] = useState('Dashboard'); // 'Dashboard' or 'History'
-  // STATE 1: THE FOUNDATION 
+  const [currentView, setCurrentView] = useState('Dashboard'); // 'Dashboard' or 'History'  
+  // --- NEW V2 STATES ---
+  const [isLocked, setIsLocked] = useState(false);
+  const [viewingType, setViewingType] = useState('plan'); // 'plan' or 'actuals'
+  const [isClosingOut, setIsClosingOut] = useState(false); 
+
+  // --- THE CORE FINANCIAL DATA STATES (Fixed Variable Names to match Demo Data) ---
   const [age, setAge] = useState(30);
   const [filingStatus, setFilingStatus] = useState('Single');
   const [stateTaxLevel, setStateTaxLevel] = useState('Medium');
@@ -69,48 +75,89 @@ function App() {
     }
   };
 
-  // --- SNAPSHOT HANDLERS ---
-  const handleSaveSnapshot = () => {
-    // 1. Ask the user what year they want to save this as
-    const currentYear = new Date().getFullYear().toString();
-    const yearToSave = window.prompt("Enter the year to save this snapshot for (e.g., 2024):", currentYear);
+  // --- V2 SNAPSHOT HANDLERS ---
+const handleLoadSnapshot = (selectedYear) => {
+    setActiveYear(selectedYear);
+    setIsClosingOut(false); // Always reset this when navigating
     
-    if (!yearToSave) return; // User cancelled
+    if (selectedYear === 'Current Workspace') {
+      setIsLocked(false);
+      setViewingType('plan');
+      return;
+    }
 
-    // 2. Package up the ENTIRE state of the app
-    const fullState = {
-      age, filingStatus, stateTaxLevel,
-      incomeData, assetData, debtData,
-      spendingData, assetContributions, debtContributions
-    };
+    if (snapshots[selectedYear]) {
+      const snap = snapshots[selectedYear];
+      const isClosed = snap.status === 'closed';
+      
+      const dataToLoad = isClosed && snap.actuals ? snap.actuals : snap.plan;
+      
+      setIsLocked(isClosed);
+      setViewingType(isClosed ? 'actuals' : 'plan');
 
-    // 3. Save it to local storage and update our state list
-    const updatedSnapshots = saveSnapshot(yearToSave, fullState);
-    setSnapshots(updatedSnapshots);
-    setActiveYear(yearToSave);
-    alert(`✅ Snapshot for ${yearToSave} saved successfully!`);
+      setAge(dataToLoad.age || 30);
+      setFilingStatus(dataToLoad.filingStatus || 'Single');
+      setStateTaxLevel(dataToLoad.stateTaxLevel || 'Medium');
+      setIncomeData(dataToLoad.incomeData || []);
+      setAssetData(dataToLoad.assetData || []);
+      setDebtData(dataToLoad.debtData || []);
+      setSpendingData(dataToLoad.spendingData || []);
+      setAssetContributions(dataToLoad.assetContributions || []);
+      setDebtContributions(dataToLoad.debtContributions || []);
+    }
   };
 
-  const handleLoadSnapshot = (selectedYear) => {
-    setActiveYear(selectedYear);
+  const handleSmartSave = () => {
+    const fullState = { age, filingStatus, stateTaxLevel, incomeData, assetData, debtData, spendingData, assetContributions, debtContributions };
     
-    if (selectedYear !== 'Current Workspace' && snapshots[selectedYear]) {
-      const d = snapshots[selectedYear].data;
+    if (activeYear === 'Current Workspace') {
+      const currentYear = new Date().getFullYear().toString();
+      const targetYear = window.prompt("Enter the year to save this PLAN for (e.g., 2026):", currentYear);
+      if (!targetYear) return; 
       
-      // Overwrite the current screen with the saved data
-      setAge(d.age || 30);
-      setFilingStatus(d.filingStatus || 'Single');
-      setStateTaxLevel(d.stateTaxLevel || 'Medium');
-      setIncomeData(d.incomeData || []);
-      setAssetData(d.assetData || []);
-      setDebtData(d.debtData || []);
-      setSpendingData(d.spendingData || []);
-      setAssetContributions(d.assetContributions || []);
-      setDebtContributions(d.debtContributions || []);
-    } else if (selectedYear === 'Current Workspace') {
-      // Optional: You could reload a default profile here, or just let them edit freely
-      alert("Switched to Current Workspace. (Note: Loading a demo profile will reset your data).");
+      const updatedSnapshots = saveSnapshot(targetYear, fullState, 'plan', 'open');
+      setSnapshots(updatedSnapshots);
+      setActiveYear(targetYear);
+      alert(`✅ ${targetYear} Plan saved successfully!`);
+    } else if (isLocked) {
+      const updatedSnapshots = saveSnapshot(activeYear, fullState, 'actuals', 'closed');
+      setSnapshots(updatedSnapshots);
+      setIsLocked(true); 
+      alert(`✅ ${activeYear} Actuals updated and re-locked.`);
+    } else {
+      const updatedSnapshots = saveSnapshot(activeYear, fullState, 'plan', 'open');
+      setSnapshots(updatedSnapshots);
+      alert(`✅ ${activeYear} Plan updated!`);
     }
+  };
+
+  const confirmCloseOut = () => {
+    const fullState = { age, filingStatus, stateTaxLevel, incomeData, assetData, debtData, spendingData, assetContributions, debtContributions };
+    const updatedSnapshots = saveSnapshot(activeYear, fullState, 'actuals', 'closed');
+    setSnapshots(updatedSnapshots);
+    setIsLocked(true);
+    setViewingType('actuals');
+    setIsClosingOut(false);
+    alert(`🔒 ${activeYear} successfully closed out!`);
+  };
+
+  const startNextYear = () => {
+    const nextYear = (parseInt(activeYear) + 1).toString();
+    
+    // We copy the exact screen (the EOY Actuals) but bump the age by 1!
+    const newPlanState = {
+      age: age + 1, 
+      filingStatus, stateTaxLevel,
+      incomeData, assetData, debtData,
+      spendingData, assetContributions, debtContributions 
+    };
+
+    const updatedSnapshots = saveSnapshot(nextYear, newPlanState, 'plan', 'open');
+    setSnapshots(updatedSnapshots);
+    setActiveYear(nextYear);
+    setIsLocked(false);
+    setViewingType('plan');
+    alert(`🎉 Welcome to ${nextYear}! Your starting balances have been pulled from ${activeYear}'s final actuals. You can now adjust your Action Plan.`);
   };
 
   // MATH HELPERS
@@ -197,7 +244,9 @@ function App() {
 
         {/* SNAPSHOT & TIME TRAVEL NAV BAR (Only show if on Dashboard) */}
         {currentView === 'Dashboard' && (
-          <div className="mb-6 bg-slate-900 text-white px-6 py-4 rounded-b-2xl rounded-tr-2xl flex flex-wrap justify-between items-center shadow-lg border border-slate-800">
+          <div className={`mb-6 px-6 py-4 rounded-b-2xl rounded-tr-2xl flex flex-wrap justify-between items-center shadow-lg border transition-colors duration-500 ${isLocked ? 'bg-slate-900 border-red-500/50' : 'bg-slate-900 border-slate-800'}`}>
+            
+            {/* Left Side: Time Travel Dropdown */}
             <div className="flex items-center gap-4">
               <span className="font-bold text-xs tracking-widest uppercase text-slate-400 flex items-center gap-2">
                 <span>⏱️</span> Time Travel
@@ -208,18 +257,59 @@ function App() {
                 className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm font-bold text-white focus:ring-emerald-500 cursor-pointer outline-none"
               >
                 <option value="Current Workspace">Current Workspace</option>
-                {Object.keys(snapshots || {}).sort().reverse().map(year => (
-                  <option key={year} value={year}>{year} Snapshot</option>
-                ))}
+                {Object.keys(snapshots || {}).sort().reverse().map(year => {
+                  const status = snapshots[year].status === 'closed' ? '🔒' : '📝';
+                  return <option key={year} value={year}>{status} {year} Snapshot</option>
+                })}
               </select>
+              
+              {/* Status Badge */}
+              {activeYear !== 'Current Workspace' && (
+                <span className={`px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full ${isLocked ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                  {isLocked ? 'Closed (Actuals)' : 'Open (Plan)'}
+                </span>
+              )}
             </div>
             
-            <button
-              onClick={handleSaveSnapshot}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2"
-            >
-              💾 Save Snapshot
-            </button>
+            {/* Right Side: Smart Action Buttons */}
+            <div className="flex gap-3">
+              {activeYear === 'Current Workspace' && (
+                <button onClick={handleSmartSave} className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
+                  💾 Save as New Plan
+                </button>
+              )}
+
+              {/* If OPEN and NOT closing out */}
+              {activeYear !== 'Current Workspace' && !isLocked && snapshots[activeYear]?.status === 'open' && !isClosingOut && (
+                <>
+                  <button onClick={handleSmartSave} className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
+                    Update Plan
+                  </button>
+                  <button onClick={() => setIsClosingOut(true)} className="bg-red-500 hover:bg-red-400 text-white font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+                    🔒 Close Out {activeYear}
+                  </button>
+                </>
+              )}
+
+              {/* If LOCKED, give them the Unlock button AND the Next Year Rollover button! */}
+              {isLocked && (
+                <>
+                  <button onClick={() => setIsLocked(false)} className="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 font-bold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+                    🔓 Unlock to Edit
+                  </button>
+                  <button onClick={startNextYear} className="bg-blue-500 hover:bg-blue-400 text-white font-black px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2 animate-pulse">
+                    ➡️ Start {parseInt(activeYear) + 1} Plan
+                  </button>
+                </>
+              )}
+
+              {/* If they unlocked a closed year to edit it */}
+              {activeYear !== 'Current Workspace' && !isLocked && snapshots[activeYear]?.status === 'closed' && (
+                <button onClick={handleSmartSave} className="bg-orange-500 hover:bg-orange-400 text-slate-900 font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
+                  ⚠️ Update & Re-Lock
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -282,94 +372,119 @@ function App() {
             </div>
 
             {/* SECTION 1: THE FOUNDATION */}
-            <div className="mb-16 mt-4">
+            <div className={`mb-16 mt-4 ${isClosingOut ? 'ring-4 ring-red-500/20 p-6 rounded-3xl bg-red-50/10' : ''}`}>
               <div className="mb-6 border-b border-gray-200 pb-4">
-                <h2 className="text-3xl font-extrabold text-gray-900">Step 1: Current Inventory</h2>
-                <p className="text-gray-500 mt-1">Take stock of your starting line. Log your income streams, asset balances, and liabilities.</p>
+                <h2 className="text-3xl font-extrabold text-gray-900">
+                  {isClosingOut ? `Final ${activeYear} Inventory (Dec 31st)` : `Step 1: Current Inventory`}
+                </h2>
+                <p className={`${isClosingOut ? 'text-red-500 font-bold' : 'text-gray-500'} mt-1`}>
+                  {isClosingOut 
+                    ? "Update these balances to exactly match your real-life bank and loan statements today." 
+                    : "Take stock of your starting line. Log your income streams, asset balances, and liabilities."}
+                </p>
               </div>
+              
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <IncomeManager data={incomeData} setData={setIncomeData} />
                 <AssetManager data={assetData} setData={setAssetData} />
                 <DebtManager data={debtData} setData={setDebtData} assets={assetData} />
               </div>
-            </div>
-            
-            <FoundationSummary 
-              incomeData={incomeData}
-              taxReceipt={taxReceipt}
-              totalInvestments={totalInvestments}
-              debtContributions={debtContributions}
-            />
 
-            {/* SECTION 2: THE ACTION PLAN */}
-            <div className="mb-6 border-b border-gray-200 pb-4">
-              <h2 className="text-3xl font-extrabold text-gray-900">Step 2: Cash Flow Allocation</h2>
-              <p className="text-gray-500 mt-1">Give your ${totalNetIncome.toLocaleString()} of net income a job.</p>
-            </div>
-            
-            {/* FLOATING UNALLOCATED CASH ROW */}
-            <UnallocatedCashTracker 
-              unallocatedCashFlow={unallocatedCashFlow} 
-              totalNetIncome={totalNetIncome} 
-            />
-
-            {/* The Action Managers */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
-              <SpendingManager data={spendingData} setData={setSpendingData} />          
-              <AssetContributionManager data={assetContributions} setData={setAssetContributions} assets={assetData} age={age} filingStatus={filingStatus} />
-              <DebtContributionManager data={debtContributions} setData={setDebtContributions} debts={debtData} />
+              {/* CLOSE OUT CONFIRMATION BOX */}
+              {isClosingOut && (
+                <div className="mt-8 bg-red-50 border-2 border-red-200 p-6 rounded-2xl flex flex-col items-center text-center shadow-sm">
+                  <h3 className="text-red-800 font-bold text-xl mb-2">Ready to lock in {activeYear}?</h3>
+                  <p className="text-red-600 text-sm mb-6 max-w-lg">By clicking this, the balances above will be permanently saved as your Year-End Actuals, and the year will be closed.</p>
+                  <div className="flex gap-4">
+                     <button onClick={() => setIsClosingOut(false)} className="px-6 py-3 text-red-600 font-bold hover:bg-red-100 rounded-xl transition-colors">Cancel</button>
+                     <button onClick={confirmCloseOut} className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-md transition-all">🔒 Confirm & Close Out</button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* SECTION 2 SUMMARY: ACTION SUMMARY */}
-            <AllocationSummary 
-              totalNetIncome={totalNetIncome}
-              totalMandatory={totalMandatory}
-              totalDiscretionary={totalDiscretionary}
-              totalInvestments={totalInvestments}
-              currentRunwayMonths={currentRunwayMonths}   
-              projectedRunwayMonths={projectedRunwayMonths}
-              liquidCash={liquidCash}
-              projectedLiquidCash={projectedLiquidCash}
-              monthlyMandatory={monthlyMandatory}
-              isRunwayLow={isRunwayLow}
-            />
+            {/* ONLY SHOW THE REST OF THE APP IF WE ARE NOT CLOSING OUT */}
+            {!isClosingOut && (
+              <>
+                <FoundationSummary 
+                  incomeData={incomeData}
+                  taxReceipt={taxReceipt}
+                  totalInvestments={totalInvestments}
+                  debtContributions={debtContributions}
+                />
 
-            {/* SECTION 3: NET WORTH PROJECTION */}
-            <NetWorthProjection
-              currentNetWorth={currentNetWorth}
-              projectedNetWorth={projectedNetWorth}
-              totalCashAddedToAssets={totalCashAddedToAssets}
-              effectiveDebtPayments={effectiveDebtPayments}
-              totalMarketGrowth={totalMarketGrowth}
-            />
+                {/* SECTION 2: THE ACTION PLAN */}
+                <div className="mb-6 border-b border-gray-200 pb-4">
+                  <h2 className="text-3xl font-extrabold text-gray-900">Step 2: Cash Flow Allocation</h2>
+                  <p className="text-gray-500 mt-1">Give your ${totalNetIncome.toLocaleString()} of net income a job.</p>
+                </div>
+                
+                {/* FLOATING UNALLOCATED CASH ROW */}
+                <UnallocatedCashTracker 
+                  unallocatedCashFlow={unallocatedCashFlow} 
+                  totalNetIncome={totalNetIncome} 
+                />
 
-            {/* SECTION 4: THE EXECUTION PLAN */}
-            <ActionChecklist 
-              contributions={assetContributions} 
-              setContributions={setAssetContributions} 
-              debts={debtContributions} 
-              setDebts={setDebtContributions} 
-              foundationAssets={assetData}
-              foundationDebts={debtData}
-            />
-            
-            <CashFlowSankey 
-              grossIncome={totalGrossIncome}
-              netIncome={totalNetIncome}
-              mandatory={totalMandatory}
-              discretionary={totalDiscretionary}
-              investments={totalInvestments}
-              unallocated={unallocatedCashFlow}
-              incomeData={incomeData}
-              taxReceipt={taxReceipt}
-              spendingData={spendingData}
-              assetContributions={assetContributions}
-              debtContributions={debtContributions}
-            />
+                {/* The Action Managers */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
+                  <SpendingManager data={spendingData} setData={setSpendingData} />          
+                  <AssetContributionManager data={assetContributions} setData={setAssetContributions} assets={assetData} age={age} filingStatus={filingStatus} />
+                  <DebtContributionManager data={debtContributions} setData={setDebtContributions} debts={debtData} />
+                </div>
+
+                {/* SECTION 2 SUMMARY: ACTION SUMMARY */}
+                <AllocationSummary 
+                  totalNetIncome={totalNetIncome}
+                  totalMandatory={totalMandatory}
+                  totalDiscretionary={totalDiscretionary}
+                  totalInvestments={totalInvestments}
+                  currentRunwayMonths={currentRunwayMonths}   
+                  projectedRunwayMonths={projectedRunwayMonths}
+                  liquidCash={liquidCash}
+                  projectedLiquidCash={projectedLiquidCash}
+                  monthlyMandatory={monthlyMandatory}
+                  isRunwayLow={isRunwayLow}
+                />
+
+                {/* SECTION 3: NET WORTH PROJECTION */}
+                <NetWorthProjection
+                  currentNetWorth={currentNetWorth}
+                  projectedNetWorth={projectedNetWorth}
+                  totalCashAddedToAssets={totalCashAddedToAssets}
+                  effectiveDebtPayments={effectiveDebtPayments}
+                  totalMarketGrowth={totalMarketGrowth}
+                />
+
+                {/* SECTION 4: THE EXECUTION PLAN */}
+                <ActionChecklist 
+                  contributions={assetContributions} 
+                  setContributions={setAssetContributions} 
+                  debts={debtContributions} 
+                  setDebts={setDebtContributions} 
+                  foundationAssets={assetData}
+                  foundationDebts={debtData}
+                />
+                
+                <CashFlowSankey 
+                  grossIncome={totalGrossIncome}
+                  netIncome={totalNetIncome}
+                  mandatory={totalMandatory}
+                  discretionary={totalDiscretionary}
+                  investments={totalInvestments}
+                  unallocated={unallocatedCashFlow}
+                  incomeData={incomeData}
+                  taxReceipt={taxReceipt}
+                  spendingData={spendingData}
+                  assetContributions={assetContributions}
+                  debtContributions={debtContributions}
+                />
+              </>
+            )}
           </>
         ) : (
           /* THIS IS THE NEW HISTORY VIEW */
           <div className="animate-fade-in pb-12">
+            <ExecutionScorecard snapshots={snapshots} />
             <HistoryTable snapshots={snapshots} />
           </div>
         )}
