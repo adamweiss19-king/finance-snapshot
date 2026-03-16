@@ -17,14 +17,20 @@ function HistoryTable({ snapshots }) {
     );
   }
 
-  // --- DATA PROCESSING HELPERS ---
-  
+  // New Helper: Get the best available data for a specific year
+  const getYearData = (year) => {
+    const snap = snapshots[year];
+    if (!snap) return {};
+    // Prioritize Actuals for history; fallback to Plan if year is open
+    return snap.actuals || snap.plan || {};
+  };
+
   // Safe calculation helpers
   const sumData = (dataArr, field) => (dataArr || []).reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
 
   // Pre-calculate Macro totals for every year
   const macroData = years.map(year => {
-    const d = snapshots[year].data;
+    const d = getYearData(year); // Use the new helper
     const assets = sumData(d.assetData, 'balance');
     const debts = sumData(d.debtData, 'balance');
     return {
@@ -40,7 +46,8 @@ function HistoryTable({ snapshots }) {
   const extractUniqueItems = (dataType) => {
     const uniqueNames = new Set();
     years.forEach(year => {
-      (snapshots[year].data[dataType] || []).forEach(item => {
+      const d = getYearData(year); // Use the new helper
+      (d[dataType] || []).forEach(item => {
         if (item.name) uniqueNames.add(item.name);
       });
     });
@@ -53,7 +60,8 @@ function HistoryTable({ snapshots }) {
 
   // Helper to find a specific item's value in a specific year
   const getItemValue = (year, dataType, itemName, valueField) => {
-    const item = (snapshots[year].data[dataType] || []).find(i => i.name === itemName);
+    const d = getYearData(year); // Use the new helper
+    const item = (d[dataType] || []).find(i => i.name === itemName);
     return item ? Number(item[valueField]) : 0;
   };
 

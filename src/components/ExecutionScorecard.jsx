@@ -13,34 +13,36 @@ function ExecutionScorecard({ snapshots }) {
 
   const scorecards = [];
 
-  // Loop through years, comparing Year N projection to Year N+1 actuals
-  for (let i = 0; i < years.length - 1; i++) {
-    const planYear = years[i];
-    const actualYear = years[i + 1];
+  // Loop through years and compare Plan vs Actuals for the SAME year
+  for (const year of years) {
+    const snap = snapshots[year];
 
-    const planData = snapshots[planYear].data;
-    const actualData = snapshots[actualYear].data;
+    // SKIP if the year is still "open" (no actuals to compare yet)
+    if (!snap?.actuals || snap?.status === 'open') continue;
 
-    // 1. Calculate what we PLANNED to hit at the end of planYear
-    // We need to pass the data through your engine safely
+    const planData = snap.plan;
+    const actualData = snap.actuals;
+
+    // 1. Calculate Planned Net Worth (using the new .plan path)
     const planTotals = {
-      totalNetIncome: planData.incomeData.reduce((acc, i) => acc + (Number(i.gross) || 0), 0) * 0.75, // Rough net for engine
-      totalSpending: planData.spendingData.reduce((acc, s) => acc + (Number(s.amount) || 0), 0),
-      totalContributionsAmount: planData.assetContributions.reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
+      totalNetIncome: planData.incomeData?.reduce((acc, i) => acc + (Number(i.gross) || 0), 0) * 0.75 || 0,
+      totalSpending: planData.spendingData?.reduce((acc, s) => acc + (Number(s.amount) || 0), 0) || 0,
+      totalContributionsAmount: planData.assetContributions?.reduce((acc, c) => acc + (Number(c.amount) || 0), 0) || 0
     };
     
+    // We use the engine to see what we THOUGHT would happen
     const projected = calculateProjections({ ...planData, ...planTotals }).projectedNetWorth;
 
-    // 2. Calculate what we ACTUALLY had at the start of actualYear
-    const actualAssets = actualData.assetData.reduce((acc, a) => acc + (Number(a.balance) || 0), 0);
-    const actualDebts = actualData.debtData.reduce((acc, d) => acc + (Number(d.balance) || 0), 0);
+    // 2. Calculate what ACTUALLY happened (using the new .actuals path)
+    const actualAssets = actualData.assetData?.reduce((acc, a) => acc + (Number(a.balance) || 0), 0) || 0;
+    const actualDebts = actualData.debtData?.reduce((acc, d) => acc + (Number(d.balance) || 0), 0) || 0;
     const actual = actualAssets - actualDebts;
 
-    // 3. The Delta (Execution Gap)
+    // 3. The Delta
     const delta = actual - projected;
     const percentBeat = projected > 0 ? (delta / projected) * 100 : 0;
 
-    scorecards.push({ planYear, projected, actual, delta, percentBeat });
+    scorecards.push({ planYear: year, projected, actual, delta, percentBeat });
   }
 
   return (

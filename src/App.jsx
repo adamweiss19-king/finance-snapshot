@@ -14,7 +14,7 @@ import { calculateTaxes } from './utils/taxEngine';
 import FoundationSummary from './components/FoundationSummary';
 import AllocationSummary from './components/AllocationSummary';
 import NetWorthProjection from './components/NetWorthProjection';
-import { getSnapshots, saveSnapshot } from './utils/storageEngine';
+import { getSnapshots, saveSnapshot,loadDemoProfileIntoStorage } from './utils/storageEngine';
 import HistoryTable from './components/HistoryTable';
 import ExecutionScorecard from './components/ExecutionScorecard';
 
@@ -23,7 +23,7 @@ import ExecutionScorecard from './components/ExecutionScorecard';
 
 function App() {
   const [snapshots, setSnapshots] = useState(() => getSnapshots());
-  const [activeYear, setActiveYear] = useState('Current');
+  const [activeYear, setActiveYear] = useState('Current Workspace'); // 'Current Workspace' or a specific year like '2024', '2025', etc.
   const [currentView, setCurrentView] = useState('Dashboard'); // 'Dashboard' or 'History'  
   // --- NEW V2 STATES ---
   const [isLocked, setIsLocked] = useState(false);
@@ -59,21 +59,21 @@ function App() {
   ]);
 
   // DEMO PROFILES LOADER (Fixed to pull the correct profile data keys)
-  const loadProfile = (profileName) => {
-    const profile = getDemoProfile(profileName);
-    if (profile) {
-      setAge(profile.age || 30);
-      setFilingStatus(profile.filingStatus || 'Single');
-      
-      // Use 'incomeData', 'assetData', etc. to match the demo file keys
-      setIncomeData(profile.incomeData || []);
-      setAssetData(profile.assetData || []);
-      setDebtData(profile.debtData || []);
-      setSpendingData(profile.spendingData || []);
-      setAssetContributions(profile.assetContributions || []);
-      setDebtContributions(profile.debtContributions || []);
-    }
-  };
+ const loadProfile = (profileName) => {
+  const profileData = getDemoProfile(profileName);
+  if (profileData) {
+    // 1. Overwrite localStorage with the 3-year history
+    const updatedSnapshots = loadDemoProfileIntoStorage(profileData);
+    setSnapshots(updatedSnapshots);
+    
+    // 2. Find the most recent year (e.g., "2025") and load it
+    const years = Object.keys(updatedSnapshots).sort();
+    const latestYear = years[years.length - 1];
+    handleLoadSnapshot(latestYear);
+    
+    alert(`✅ Loaded ${profileName} history (2023-${latestYear})`);
+  }
+};
 
   // --- V2 SNAPSHOT HANDLERS ---
 const handleLoadSnapshot = (selectedYear) => {
@@ -132,13 +132,35 @@ const handleLoadSnapshot = (selectedYear) => {
   };
 
   const confirmCloseOut = () => {
-    const fullState = { age, filingStatus, stateTaxLevel, incomeData, assetData, debtData, spendingData, assetContributions, debtContributions };
+    // 1. Create a version of the data where "isNew" assets are reset to $0 for the Actuals report
+    const actualAssetData = assetData.map(asset => 
+      asset.isNew ? { ...asset, balance: 0 } : asset
+    );
+    const actualDebtData = debtData.map(debt => 
+      debt.isNew ? { ...debt, balance: 0 } : debt
+    );
+
+    const fullState = { 
+      age, filingStatus, stateTaxLevel, 
+      incomeData, 
+      assetData: actualAssetData, // Use the reset assets
+      debtData: actualDebtData,   // Use the reset debts
+      spendingData, 
+      assetContributions, 
+      debtContributions 
+    };
+    
     const updatedSnapshots = saveSnapshot(activeYear, fullState, 'actuals', 'closed');
     setSnapshots(updatedSnapshots);
+    
+    // UI Updates
+    setAssetData(actualAssetData);
+    setDebtData(actualDebtData);
     setIsLocked(true);
     setViewingType('actuals');
     setIsClosingOut(false);
-    alert(`🔒 ${activeYear} successfully closed out!`);
+    
+    alert(`🔒 ${activeYear} closed! New accounts have been reset to $0 for your final reporting.`);
   };
 
   const startNextYear = () => {
@@ -285,7 +307,21 @@ const handleLoadSnapshot = (selectedYear) => {
                   <button onClick={handleSmartSave} className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
                     Update Plan
                   </button>
-                  <button onClick={() => setIsClosingOut(true)} className="bg-red-500 hover:bg-red-400 text-white font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      // 1. Prep the data: Find 'New' accounts and zero them out immediately
+                      const preppedAssets = assetData.map(a => a.isNew ? { ...a, balance: 0 } : a);
+                      const preppedDebts = debtData.map(d => d.isNew ? { ...d, balance: 0 } : d);
+                      
+                      // 2. Update the live state so the user sees $0 on the screen
+                      setAssetData(preppedAssets);
+                      setDebtData(preppedDebts);
+                      
+                      // 3. Enter the close-out view
+                      setIsClosingOut(true);
+                    }} 
+                    className="bg-red-500 hover:bg-red-400 text-white font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2"
+                  >
                     🔒 Close Out {activeYear}
                   </button>
                 </>

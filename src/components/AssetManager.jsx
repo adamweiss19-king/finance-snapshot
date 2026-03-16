@@ -11,7 +11,7 @@ const ASSET_BUCKETS = Object.keys(ASSET_MAPPING);
 function AssetManager({ data, setData }) {
   const addAsset = () => {
     // We now track BOTH the macro bucket and the specific category
-    setData([...data, { id: Date.now(), name: '', bucket: 'Cash', category: 'Bank Account/Savings', balance: 0, growth: 0 }]);
+    setData([...data, { id: Date.now(), name: '', bucket: 'Cash', category: 'Bank Account/Savings', balance: 0, growth: 0, isNew: true }]);
   };
 
   const updateAsset = (id, field, value) => {
@@ -58,6 +58,11 @@ function AssetManager({ data, setData }) {
                   placeholder="e.g. Chase Savings" 
                   className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
                 />
+                {asset.isNew && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter shrink-0">
+                      New
+                    </span>
+                  )}
                 <div className="flex flex-col items-end shrink-0">
                   <div className="flex items-center justify-end text-right">
                     <span className="text-lg font-black text-blue-300 mr-0.5">$</span>
