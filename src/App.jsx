@@ -14,11 +14,16 @@ import { calculateTaxes } from './utils/taxEngine';
 import FoundationSummary from './components/FoundationSummary';
 import AllocationSummary from './components/AllocationSummary';
 import NetWorthProjection from './components/NetWorthProjection';
+import { getSnapshots, saveSnapshot } from './utils/storageEngine';
+import HistoryTable from './components/HistoryTable';
 
 
 
 
 function App() {
+  const [snapshots, setSnapshots] = useState(() => getSnapshots());
+  const [activeYear, setActiveYear] = useState('Current');
+  const [currentView, setCurrentView] = useState('Dashboard'); // 'Dashboard' or 'History'
   // STATE 1: THE FOUNDATION 
   const [age, setAge] = useState(30);
   const [filingStatus, setFilingStatus] = useState('Single');
@@ -61,6 +66,50 @@ function App() {
       setSpendingData(profile.spendingData || []);
       setAssetContributions(profile.assetContributions || []);
       setDebtContributions(profile.debtContributions || []);
+    }
+  };
+
+  // --- SNAPSHOT HANDLERS ---
+  const handleSaveSnapshot = () => {
+    // 1. Ask the user what year they want to save this as
+    const currentYear = new Date().getFullYear().toString();
+    const yearToSave = window.prompt("Enter the year to save this snapshot for (e.g., 2024):", currentYear);
+    
+    if (!yearToSave) return; // User cancelled
+
+    // 2. Package up the ENTIRE state of the app
+    const fullState = {
+      age, filingStatus, stateTaxLevel,
+      incomeData, assetData, debtData,
+      spendingData, assetContributions, debtContributions
+    };
+
+    // 3. Save it to local storage and update our state list
+    const updatedSnapshots = saveSnapshot(yearToSave, fullState);
+    setSnapshots(updatedSnapshots);
+    setActiveYear(yearToSave);
+    alert(`✅ Snapshot for ${yearToSave} saved successfully!`);
+  };
+
+  const handleLoadSnapshot = (selectedYear) => {
+    setActiveYear(selectedYear);
+    
+    if (selectedYear !== 'Current Workspace' && snapshots[selectedYear]) {
+      const d = snapshots[selectedYear].data;
+      
+      // Overwrite the current screen with the saved data
+      setAge(d.age || 30);
+      setFilingStatus(d.filingStatus || 'Single');
+      setStateTaxLevel(d.stateTaxLevel || 'Medium');
+      setIncomeData(d.incomeData || []);
+      setAssetData(d.assetData || []);
+      setDebtData(d.debtData || []);
+      setSpendingData(d.spendingData || []);
+      setAssetContributions(d.assetContributions || []);
+      setDebtContributions(d.debtContributions || []);
+    } else if (selectedYear === 'Current Workspace') {
+      // Optional: You could reload a default profile here, or just let them edit freely
+      alert("Switched to Current Workspace. (Note: Loading a demo profile will reset your data).");
     }
   };
 
@@ -130,156 +179,202 @@ function App() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-gray-900 flex flex-col">
       <div className="max-w-[1600px] mx-auto w-full flex-grow">
         
-        {/* Header & Demo Buttons */}
-        <div className="mb-8 bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <h3 className="text-indigo-900 font-bold flex items-center gap-2">🧪 Test Data Templates</h3>
-            <p className="text-indigo-700 text-xs">Instantly load realistic V2 profiles to see how the math works.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => loadProfile('singleNewHire')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Single (New Hire)</button>
-            <button onClick={() => loadProfile('singleMidCareer')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Single (Mid-Career)</button>
-            <button onClick={() => loadProfile('familyMidCareer')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Family (Mid-Career)</button>
-            <button onClick={() => loadProfile('complex')} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-900 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Complex / Power User</button>
-          </div>
+        {/* --- GLOBAL APP TABS --- */}
+        <div className="flex gap-2 mb-4">
+          <button 
+            onClick={() => setCurrentView('Dashboard')}
+            className={`px-6 py-2 rounded-t-xl font-bold text-sm transition-colors ${currentView === 'Dashboard' ? 'bg-indigo-900 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+          >
+            📊 Planning Dashboard
+          </button>
+          <button 
+            onClick={() => setCurrentView('History')}
+            className={`px-6 py-2 rounded-t-xl font-bold text-sm transition-colors ${currentView === 'History' ? 'bg-indigo-900 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+          >
+            📚 Historical Ledger
+          </button>
         </div>
 
-        {/* Demographic Context Bar */}
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-wrap gap-6 items-center">
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Age</label>
-            <input 
-              type="number" 
-              value={age} 
-              onChange={(e) => setAge(parseInt(e.target.value) || 0)}
-              className="w-20 bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500"
+        {/* SNAPSHOT & TIME TRAVEL NAV BAR (Only show if on Dashboard) */}
+        {currentView === 'Dashboard' && (
+          <div className="mb-6 bg-slate-900 text-white px-6 py-4 rounded-b-2xl rounded-tr-2xl flex flex-wrap justify-between items-center shadow-lg border border-slate-800">
+            <div className="flex items-center gap-4">
+              <span className="font-bold text-xs tracking-widest uppercase text-slate-400 flex items-center gap-2">
+                <span>⏱️</span> Time Travel
+              </span>
+              <select
+                value={activeYear}
+                onChange={(e) => handleLoadSnapshot(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm font-bold text-white focus:ring-emerald-500 cursor-pointer outline-none"
+              >
+                <option value="Current Workspace">Current Workspace</option>
+                {Object.keys(snapshots || {}).sort().reverse().map(year => (
+                  <option key={year} value={year}>{year} Snapshot</option>
+                ))}
+              </select>
+            </div>
+            
+            <button
+              onClick={handleSaveSnapshot}
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2"
+            >
+              💾 Save Snapshot
+            </button>
+          </div>
+        )}
+
+        {/* --- MAIN CONTENT AREA --- */}
+        {currentView === 'Dashboard' ? (
+          <>
+            {/* Header & Demo Buttons */}
+            <div className="mb-8 bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-indigo-900 font-bold flex items-center gap-2">🧪 Test Data Templates</h3>
+                <p className="text-indigo-700 text-xs">Instantly load realistic V2 profiles to see how the math works.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => loadProfile('singleNewHire')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Single (New Hire)</button>
+                <button onClick={() => loadProfile('singleMidCareer')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Single (Mid-Career)</button>
+                <button onClick={() => loadProfile('familyMidCareer')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Family (Mid-Career)</button>
+                <button onClick={() => loadProfile('complex')} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-900 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Complex / Power User</button>
+              </div>
+            </div>
+
+            {/* Demographic Context Bar */}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-wrap gap-6 items-center">
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Age</label>
+                <input 
+                  type="number" 
+                  value={age} 
+                  onChange={(e) => setAge(parseInt(e.target.value) || 0)}
+                  className="w-20 bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Filing Status</label>
+                <select 
+                  value={filingStatus} 
+                  onChange={(e) => setFilingStatus(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="Single">Single</option>
+                  <option value="Married Filing Jointly">Married Filing Jointly</option>
+                  <option value="Married Filing Separately">Married Filing Separately</option>
+                  <option value="Head of Household">Head of Household</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">State Tax Level</label>
+                <select 
+                  value={stateTaxLevel} 
+                  onChange={(e) => setStateTaxLevel(e.target.value)} 
+                  className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="None">None (0%)</option>
+                  <option value="Low">Low (Approx)</option>
+                  <option value="Medium">Medium (Approx)</option>
+                  <option value="High">High (Approx)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* SECTION 1: THE FOUNDATION */}
+            <div className="mb-16 mt-4">
+              <div className="mb-6 border-b border-gray-200 pb-4">
+                <h2 className="text-3xl font-extrabold text-gray-900">Step 1: Current Inventory</h2>
+                <p className="text-gray-500 mt-1">Take stock of your starting line. Log your income streams, asset balances, and liabilities.</p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <IncomeManager data={incomeData} setData={setIncomeData} />
+                <AssetManager data={assetData} setData={setAssetData} />
+                <DebtManager data={debtData} setData={setDebtData} assets={assetData} />
+              </div>
+            </div>
+            
+            <FoundationSummary 
+              incomeData={incomeData}
+              taxReceipt={taxReceipt}
+              totalInvestments={totalInvestments}
+              debtContributions={debtContributions}
             />
+
+            {/* SECTION 2: THE ACTION PLAN */}
+            <div className="mb-6 border-b border-gray-200 pb-4">
+              <h2 className="text-3xl font-extrabold text-gray-900">Step 2: Cash Flow Allocation</h2>
+              <p className="text-gray-500 mt-1">Give your ${totalNetIncome.toLocaleString()} of net income a job.</p>
+            </div>
+            
+            {/* FLOATING UNALLOCATED CASH ROW */}
+            <UnallocatedCashTracker 
+              unallocatedCashFlow={unallocatedCashFlow} 
+              totalNetIncome={totalNetIncome} 
+            />
+
+            {/* The Action Managers */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
+              <SpendingManager data={spendingData} setData={setSpendingData} />          
+              <AssetContributionManager data={assetContributions} setData={setAssetContributions} assets={assetData} age={age} filingStatus={filingStatus} />
+              <DebtContributionManager data={debtContributions} setData={setDebtContributions} debts={debtData} />
+            </div>
+
+            {/* SECTION 2 SUMMARY: ACTION SUMMARY */}
+            <AllocationSummary 
+              totalNetIncome={totalNetIncome}
+              totalMandatory={totalMandatory}
+              totalDiscretionary={totalDiscretionary}
+              totalInvestments={totalInvestments}
+              currentRunwayMonths={currentRunwayMonths}   
+              projectedRunwayMonths={projectedRunwayMonths}
+              liquidCash={liquidCash}
+              projectedLiquidCash={projectedLiquidCash}
+              monthlyMandatory={monthlyMandatory}
+              isRunwayLow={isRunwayLow}
+            />
+
+            {/* SECTION 3: NET WORTH PROJECTION */}
+            <NetWorthProjection
+              currentNetWorth={currentNetWorth}
+              projectedNetWorth={projectedNetWorth}
+              totalCashAddedToAssets={totalCashAddedToAssets}
+              effectiveDebtPayments={effectiveDebtPayments}
+              totalMarketGrowth={totalMarketGrowth}
+            />
+
+            {/* SECTION 4: THE EXECUTION PLAN */}
+            <ActionChecklist 
+              contributions={assetContributions} 
+              setContributions={setAssetContributions} 
+              debts={debtContributions} 
+              setDebts={setDebtContributions} 
+              foundationAssets={assetData}
+              foundationDebts={debtData}
+            />
+            
+            <CashFlowSankey 
+              grossIncome={totalGrossIncome}
+              netIncome={totalNetIncome}
+              mandatory={totalMandatory}
+              discretionary={totalDiscretionary}
+              investments={totalInvestments}
+              unallocated={unallocatedCashFlow}
+              incomeData={incomeData}
+              taxReceipt={taxReceipt}
+              spendingData={spendingData}
+              assetContributions={assetContributions}
+              debtContributions={debtContributions}
+            />
+          </>
+        ) : (
+          /* THIS IS THE NEW HISTORY VIEW */
+          <div className="animate-fade-in pb-12">
+            <HistoryTable snapshots={snapshots} />
           </div>
-
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Filing Status</label>
-            <select 
-              value={filingStatus} 
-              onChange={(e) => setFilingStatus(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
-            >
-              <option value="Single">Single</option>
-              <option value="Married Filing Jointly">Married Filing Jointly</option>
-              <option value="Married Filing Separately">Married Filing Separately</option>
-              <option value="Head of Household">Head of Household</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">State Tax Level</label>
-            <select 
-              value={stateTaxLevel} 
-              onChange={(e) => setStateTaxLevel(e.target.value)} 
-              className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
-            >
-              <option value="None">None (0%)</option>
-              <option value="Low">Low (Approx)</option>
-              <option value="Medium">Medium (Approx)</option>
-              <option value="High">High (Approx)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* SECTION 1: THE FOUNDATION */}
-        <div className="mb-16 mt-4">
-          <div className="mb-6 border-b border-gray-200 pb-4">
-            <h2 className="text-3xl font-extrabold text-gray-900">Section 1: The Foundation</h2>
-            <p className="text-gray-500 mt-1">Enter your income, current asset balances, and existing debts.</p>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <IncomeManager data={incomeData} setData={setIncomeData} />
-            <AssetManager data={assetData} setData={setAssetData} />
-            <DebtManager data={debtData} setData={setDebtData} assets={assetData} />
-          </div>
-        </div>
-          <FoundationSummary 
-            incomeData={incomeData}
-            taxReceipt={taxReceipt}
-            totalInvestments={totalInvestments}
-            debtContributions={debtContributions}
-          />
-        {/* SECTION 2: THE ACTION PLAN */}
-        <div className="mb-6 border-b border-gray-200 pb-4">
-          <h2 className="text-3xl font-extrabold text-gray-900">Section 2: The Action Plan</h2>
-          <p className="text-gray-500 mt-1">Assign your ${totalNetIncome.toLocaleString()} Net Income to expenses, investments, and debt.</p>
-        </div>
-        
-        {/* FLOATING UNALLOCATED CASH ROW */}
-          <UnallocatedCashTracker 
-            unallocatedCashFlow={unallocatedCashFlow} 
-            totalNetIncome={totalNetIncome} 
-          />
-
-        {/* The Action Managers */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
-          <SpendingManager 
-          data={spendingData} setData={setSpendingData} 
-          />          
-          <AssetContributionManager 
-            data={assetContributions} 
-            setData={setAssetContributions} 
-            assets={assetData} 
-            age={age} 
-            filingStatus={filingStatus} 
-          />
-          <DebtContributionManager 
-            data={debtContributions} 
-            setData={setDebtContributions} 
-            debts={debtData} 
-          />
-        </div>
-
-        {/* SECTION 2 SUMMARY: ACTION SUMMARY */}
-        <AllocationSummary 
-          totalNetIncome={totalNetIncome}
-          totalMandatory={totalMandatory}
-          totalDiscretionary={totalDiscretionary}
-          totalInvestments={totalInvestments}
-          currentRunwayMonths={currentRunwayMonths}   
-          projectedRunwayMonths={projectedRunwayMonths}
-          liquidCash={liquidCash}
-          projectedLiquidCash={projectedLiquidCash}
-          monthlyMandatory={monthlyMandatory}
-          isRunwayLow={isRunwayLow}
-        />
-
-        <NetWorthProjection
-          currentNetWorth={currentNetWorth}
-          projectedNetWorth={projectedNetWorth}
-          totalCashAddedToAssets={totalCashAddedToAssets}
-          effectiveDebtPayments={effectiveDebtPayments}
-          totalMarketGrowth={totalMarketGrowth}
-        />
-
-        {/* SECTION 3: THE EXECUTION PLAN */}
-        <ActionChecklist 
-          contributions={assetContributions} 
-          setContributions={setAssetContributions} 
-          debts={debtContributions} 
-          setDebts={setDebtContributions} 
-          foundationAssets={assetData}
-          foundationDebts={debtData}
-        />
+        )}
       </div>
-        <CashFlowSankey 
-          grossIncome={totalGrossIncome}
-          netIncome={totalNetIncome}
-          mandatory={totalMandatory}
-          discretionary={totalDiscretionary}
-          investments={totalInvestments}
-          unallocated={unallocatedCashFlow}
-          incomeData={incomeData}
-          taxReceipt={taxReceipt}
-          spendingData={spendingData}
-          assetContributions={assetContributions}
-          debtContributions={debtContributions}
-        />
-      
+
       {/* LEGAL DISCLAIMER */}
       <footer className="mt-12 mb-8 text-center text-xs text-slate-400 max-w-3xl mx-auto">
         <p>
@@ -287,7 +382,7 @@ function App() {
         </p>
       </footer>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
