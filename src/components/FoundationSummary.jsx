@@ -73,7 +73,7 @@ function FoundationSummary({
           </div>
           <div className="flex justify-between items-center text-xs mt-1">
             <span className="text-sky-700 font-semibold">Status:</span>
-            <span className="font-bold text-sky-900">Wealth Building</span>
+            <span className="font-bold text-sky-900">Placeholder for now</span>
           </div>
         </div>
 
@@ -89,7 +89,7 @@ function FoundationSummary({
           </div>
           <div className="flex justify-between items-center text-xs mt-1">
             <span className="text-rose-700 font-semibold">Status:</span>
-            <span className="font-bold text-rose-900">Obligated</span>
+            <span className="font-bold text-rose-900">Placeholder for now</span>
           </div>
         </div>
 

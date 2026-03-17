@@ -14,7 +14,7 @@ import { calculateTaxes } from './utils/taxEngine';
 import FoundationSummary from './components/FoundationSummary';
 import AllocationSummary from './components/AllocationSummary';
 import NetWorthProjection from './components/NetWorthProjection';
-import { getSnapshots, saveSnapshot,loadDemoProfileIntoStorage } from './utils/storageEngine';
+import { getSnapshots, saveSnapshot,loadDemoProfileIntoStorage, clearAllSnapshots, deleteSnapshot } from './utils/storageEngine';
 import HistoryTable from './components/HistoryTable';
 import ExecutionScorecard from './components/ExecutionScorecard';
 
@@ -35,28 +35,14 @@ function App() {
   const [filingStatus, setFilingStatus] = useState('Single');
   const [stateTaxLevel, setStateTaxLevel] = useState('Medium');
 
-  const [incomeData, setIncomeData] = useState([
-    { id: 1, name: 'Salary', gross: 100000, taxRate: 25, type: 'W-2 Salary', isTaxable: true }
-  ]);
-  const [assetData, setAssetData] = useState([
-    { id: 1, name: 'Chase Savings', bucket: 'Cash', category: 'Bank Account/Savings', balance: 15000, growth: 0 },
-    { id: 2, name: 'Fidelity 401k', bucket: 'Retirement', category: '401k', balance: 50000, growth: 7 }
-  ]);
-  const [debtData, setDebtData] = useState([
-    { id: 1, name: 'Car Loan', balance: 15000, interestRate: 5, linkedAssetId: '' }
-  ]);
+  const [incomeData, setIncomeData] = useState([]);
+  const [assetData, setAssetData] = useState([]);
+  const [debtData, setDebtData] = useState([]);
 
   // STATE 2: THE FLOW (Fixed Variable Names to match Demo Data)
-  const [spendingData, setSpendingData] = useState([
-    { id: 1, name: 'Rent', category: 'Housing', amount: 24000, type: 'Mandatory' },
-    { id: 2, name: 'e.g. Total Amex Spend', category: 'Card Expenses', amount: 5000, type: 'Discretionary' }
-  ]);
-  const [assetContributions, setAssetContributions] = useState([
-    { id: 1, name: '401k Match', amount: 10000, type: 'Mandatory', linkedId: '2', frequency: 'Monthly' }
-  ]);
-  const [debtContributions, setDebtContributions] = useState([
-    { id: 1, name: 'Car Loan Minimum', amount: 4000, type: 'Mandatory', linkedId: '1', frequency: 'Monthly' }
-  ]);
+  const [spendingData, setSpendingData] = useState([]);
+  const [assetContributions, setAssetContributions] = useState([]);
+  const [debtContributions, setDebtContributions] = useState([]);
 
   // DEMO PROFILES LOADER (Fixed to pull the correct profile data keys)
  const loadProfile = (profileName) => {
@@ -149,6 +135,32 @@ const handleLoadSnapshot = (selectedYear) => {
     setIsClosingOut(false);
     
     alert(`🔒 ${activeYear} successfully closed out! Your Actuals are now locked in.`);
+  };
+
+ const handleDeleteYear = () => {
+      if (window.confirm(`Are you sure you want to permanently delete the ${activeYear} snapshot?`)) {
+        const updatedSnapshots = deleteSnapshot(activeYear);
+        setSnapshots(updatedSnapshots);
+        
+        // 1. Wipe the screen clean!
+        setIncomeData([]);
+        setAssetData([]);
+        setDebtData([]);
+        setSpendingData([]);
+        setAssetContributions([]);
+        setDebtContributions([]);
+        
+        // 2. Kick back to the blank workspace
+        handleLoadSnapshot('Current Workspace'); 
+        alert(`🗑️ ${activeYear} has been deleted.`);
+      }
+    };
+
+  const handleNukeDatabase = () => {
+    if (window.confirm("⚠️ WARNING: This will permanently delete ALL saved years and completely reset the app. Are you sure?")) {
+      clearAllSnapshots();
+      window.location.reload(); // The cleanest way to hard-reset the entire React state
+    }
   };
 
   const startNextYear = () => {
@@ -318,6 +330,16 @@ const createLinkedAsset = (contributionId, contributionName) => {
                   {isLocked ? 'Closed (Actuals)' : 'Open (Plan)'}
                 </span>
               )}
+              {/* Delete Year Button */}
+              {activeYear !== 'Current Workspace' && (
+                <button 
+                  onClick={handleDeleteYear} 
+                  className="ml-2 text-[10px] uppercase tracking-widest font-black text-red-400 hover:text-red-500 transition-colors"
+                  title="Delete this year"
+                >
+                  ✕ Delete
+                </button>
+              )}
             </div>
             
             {/* Right Side: Smart Action Buttons */}
@@ -354,8 +376,11 @@ const createLinkedAsset = (contributionId, contributionName) => {
               {/* If LOCKED, give them the Unlock button AND the Next Year Rollover button! */}
               {isLocked && (
                 <>
-                  <button onClick={() => setIsLocked(false)} className="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 font-bold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
-                    🔓 Unlock to Edit
+                  <button onClick={() => {
+                    setIsLocked(false);
+                    setIsClosingOut(true); // Don't wipe data, just show the review UI!
+                  }} className="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 font-bold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+                    🔓 Unlock to Edit Actuals
                   </button>
                   <button onClick={startNextYear} className="bg-blue-500 hover:bg-blue-400 text-white font-black px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2 animate-pulse">
                     ➡️ Start {parseInt(activeYear) + 1} Plan
@@ -363,12 +388,6 @@ const createLinkedAsset = (contributionId, contributionName) => {
                 </>
               )}
 
-              {/* If they unlocked a closed year to edit it */}
-              {activeYear !== 'Current Workspace' && !isLocked && snapshots[activeYear]?.status === 'closed' && (
-                <button onClick={handleSmartSave} className="bg-orange-500 hover:bg-orange-400 text-slate-900 font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
-                  ⚠️ Update & Re-Lock
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -386,7 +405,6 @@ const createLinkedAsset = (contributionId, contributionName) => {
                 <button onClick={() => loadProfile('singleNewHire')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Single (New Hire)</button>
                 <button onClick={() => loadProfile('singleMidCareer')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Single (Mid-Career)</button>
                 <button onClick={() => loadProfile('familyMidCareer')} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Family (Mid-Career)</button>
-                <button onClick={() => loadProfile('complex')} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-900 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition">Complex / Power User</button>
               </div>
             </div>
 
@@ -458,7 +476,14 @@ const createLinkedAsset = (contributionId, contributionName) => {
                   <h3 className="text-red-800 font-bold text-xl mb-2">Ready to lock in {activeYear}?</h3>
                   <p className="text-red-600 text-sm mb-6 max-w-lg">By clicking this, the balances above will be permanently saved as your Year-End Actuals, and the year will be closed.</p>
                   <div className="flex gap-4">
-                     <button onClick={() => setIsClosingOut(false)} className="px-6 py-3 text-red-600 font-bold hover:bg-red-100 rounded-xl transition-colors">Cancel</button>
+                     <button onClick={() => {
+                       setIsClosingOut(false);
+                       // If we were editing a closed year, reload it to discard unsaved tweaks and re-lock
+                       if (snapshots[activeYear]?.status === 'closed') {
+                         handleLoadSnapshot(activeYear); 
+                       }
+                     }} className="px-6 py-3 text-red-600 font-bold hover:bg-red-100 rounded-xl transition-colors">Cancel</button>
+                     
                      <button onClick={confirmCloseOut} className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-md transition-all">🔒 Confirm & Close Out</button>
                   </div>
                 </div>
@@ -492,7 +517,8 @@ const createLinkedAsset = (contributionId, contributionName) => {
                   <SpendingManager data={spendingData} setData={setSpendingData} />          
                   <AssetContributionManager data={assetContributions} setData={setAssetContributions} assets={assetData} age={age} 
                     filingStatus={filingStatus} onCreateLinkedAsset={createLinkedAsset} />
-                  <DebtContributionManager data={debtContributions} setData={setDebtContributions} debts={debtData} />
+                  <DebtContributionManager data={debtContributions} setData={setDebtContributions} debts={debtData} 
+                    onCreateLinkedDebt={createLinkedDebt}   />
                 </div>
 
                 {/* SECTION 2 SUMMARY: ACTION SUMMARY */}
@@ -554,10 +580,16 @@ const createLinkedAsset = (contributionId, contributionName) => {
       </div>
 
       {/* LEGAL DISCLAIMER */}
-      <footer className="mt-12 mb-8 text-center text-xs text-slate-400 max-w-3xl mx-auto">
+      <footer className="mt-12 mb-8 text-center text-xs text-slate-400 max-w-3xl mx-auto flex flex-col items-center gap-4">
         <p>
           <strong>Disclaimer:</strong> This application is a personal planning tool provided for educational and informational purposes only. I am not a financial advisor, and these projections do not constitute professional financial or tax advice. Please consult with a certified professional before making major financial decisions.
         </p>
+        <button 
+          onClick={handleNukeDatabase} 
+          className="text-[10px] font-black uppercase tracking-widest text-red-300 hover:text-red-500 transition-colors border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md"
+        >
+          ⚠️ Reset App & Delete All Data
+        </button>
       </footer>
     </div>
   );

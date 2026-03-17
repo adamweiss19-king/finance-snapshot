@@ -99,17 +99,29 @@ function HistoryTable({ snapshots }) {
 
       {/* THE TABLE */}
       <div className="overflow-x-auto pb-4 custom-scrollbar">
-        <table className="w-full min-w-[800px] text-left border-collapse whitespace-nowrap">
-          <thead>
+        <table className="w-max text-left border-collapse whitespace-nowrap">
+        <thead>
             <tr>
               <th className="p-4 border-b-2 border-slate-200 text-slate-400 font-bold uppercase tracking-wider text-xs">
                 Metric
               </th>
-              {years.map(year => (
-                <th key={year} className="p-4 border-b-2 border-slate-200 border-l border-slate-100 bg-slate-50 text-slate-800 font-black text-lg text-right w-36">
-                  {year}
-                </th>
-              ))}
+              {years.map(year => {
+                // Check if this specific year is still in the planning phase
+                const isProjected = snapshots[year]?.status === 'open';
+                
+                return (
+                  <th key={year} className="p-4 border-b-2 border-slate-200 border-l border-slate-100 bg-slate-50 text-slate-800 font-black text-lg text-right w-36">
+                    {isProjected ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] text-blue-500 uppercase tracking-widest font-black leading-none mb-1">Projected</span>
+                        <span>{year}</span>
+                      </div>
+                    ) : (
+                      year
+                    )}
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           

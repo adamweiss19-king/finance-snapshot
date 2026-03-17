@@ -62,11 +62,11 @@ function ExecutionScorecard({ snapshots }) {
               
               <div className="flex justify-between items-end mb-2">
                 <div>
-                  <p className="text-xs text-slate-500 font-semibold mb-1">Target (Plan)</p>
+                  <p className="text-xs text-slate-500 font-semibold mb-1">Planned Net Worth</p>
                   <p className="text-lg font-bold text-slate-700">{money.format(score.projected)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-slate-500 font-semibold mb-1">Reality (Actual)</p>
+                  <p className="text-xs text-slate-500 font-semibold mb-1">EOY Net Worth</p>
                   <p className="text-xl font-black text-slate-900">{money.format(score.actual)}</p>
                 </div>
               </div>

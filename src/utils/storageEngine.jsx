@@ -35,6 +35,30 @@ export const saveSnapshot = (year, fullState, type = 'plan', status = 'open') =>
   }
 };
 
+// Delete a specific year's snapshot
+export const deleteSnapshot = (year) => {
+  try {
+    const existingSnapshots = getSnapshots();
+    delete existingSnapshots[year]; // Remove the year from the object
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(existingSnapshots));
+    return existingSnapshots;
+  } catch (error) {
+    console.error("Storage Engine Error: Failed to delete snapshot.", error);
+    return getSnapshots();
+  }
+};
+
+// Nuke the entire database
+export const clearAllSnapshots = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    return {};
+  } catch (error) {
+    console.error("Storage Engine Error: Failed to clear storage.", error);
+    return {};
+  }
+};
+
 export const loadDemoProfileIntoStorage = (demoData) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(demoData));
