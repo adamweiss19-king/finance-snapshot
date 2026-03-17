@@ -1,4 +1,5 @@
 import React from 'react';
+import Tooltip from './Tooltip';
 
 function AllocationSummary({
   totalNetIncome,
@@ -49,8 +50,9 @@ function AllocationSummary({
       {/* EMERGENCY FUND RUNWAY VISUAL (Upgraded) */}
       <div className={`mt-6 p-5 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 transition-colors duration-500 ${isRunwayLow ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
         <div>
-          <span className={`block text-xs uppercase font-bold tracking-widest ${isRunwayLow ? 'text-red-500' : 'text-emerald-600'}`}>
+          <span className={`block text-xs uppercase font-bold tracking-widest flex items-center ${isRunwayLow ? 'text-red-500' : 'text-emerald-600'}`}>
             Projected Emergency Runway (Dec 31)
+            <Tooltip message="Calculated by dividing your projected liquid cash (Savings + Checking) by your required monthly Mandatory expenses. Aim for 3 to 6 months." />
           </span>
           <div className="flex items-baseline gap-3">
             <span className={`text-3xl font-black ${isRunwayLow ? 'text-red-700' : 'text-emerald-700'}`}>

@@ -131,7 +131,7 @@ function ActionChecklist({ contributions, setContributions, debts, setDebts, fou
     <div className="mb-12 bg-slate-100 p-8 rounded-2xl shadow-inner border border-slate-200">
       <div className="mb-6 border-b border-slate-300 pb-4">
         <h2 className="text-3xl font-extrabold text-slate-800">Section 3: The Execution Plan</h2>
-        <p className="text-slate-600 mt-1">Track your progress throughout the year as you automate your finances.</p>
+        <p className="text-slate-600 mt-1">Track your progress throughout the year as you execute your plan.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -147,7 +147,7 @@ function ActionChecklist({ contributions, setContributions, debts, setDebts, fou
         <div>
           <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">📉 Debt Paydown Actions</h3>
           {debts.length === 0 ? (
-            <p className="text-sm text-gray-400 italic p-4 bg-white rounded-xl border border-dashed border-gray-300">No extra debt payments planned.</p>
+            <p className="text-sm text-gray-400 italic p-4 bg-white rounded-xl border border-dashed border-gray-300">No debt payments planned.</p>
           ) : (
             debts.map(d => renderTask(d, 'debt', updateDebtFreq))
           )}

@@ -1,4 +1,5 @@
 import React from 'react';
+import Tooltip from './Tooltip';
 
 const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0,
@@ -8,7 +9,7 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus, on
     setData([...data, { id: Date.now(), name: '', amount: 0, linkedId: 'new' }]);
   };
 
-  const updateContribution = (id, field, value) => {
+  const updateContribution = (id, field, value) => {f
     setData(data.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
@@ -126,7 +127,10 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus, on
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex flex-col gap-2 w-full mt-2">
                 <div className="flex items-center gap-2 w-full">
-                  <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Destination:</span>
+                  <span className="font-bold text-gray-400 tracking-widest text-[10px] flex items-center">
+                    Destination:
+                    <Tooltip message="Link to an existing account or create a new one." />
+                  </span>
                   <select 
                     value={item.linkedId || 'new'} 
                     onChange={(e) => updateContribution(item.id, 'linkedId', e.target.value)}
@@ -145,7 +149,7 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus, on
                     onClick={() => onCreateLinkedAsset(item.id, item.name)}
                     className="w-full text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 py-1.5 rounded-md transition-colors shadow-sm"
                   >
-                    + Create $0 Account in Foundation
+                    + Create a New Account for this Asset in the Foundation Section - (section 1)
                   </button>
                 )}
               </div>

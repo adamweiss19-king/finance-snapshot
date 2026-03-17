@@ -1,4 +1,5 @@
 import React from 'react';
+import Tooltip from './Tooltip';
 
 const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -47,7 +48,10 @@ function FoundationSummary({
 
         {/* TAXES BLOCK */}
         <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-          <p className="text-orange-800 text-xs font-bold uppercase tracking-wider mb-1">Total Taxes</p>
+          <p className="text-orange-800 text-xs font-bold uppercase tracking-wider mb-1 flex items-center">
+            Total Taxes
+            <Tooltip message="Estimated using the standard deduction and progressive IRS tax brackets. This is a planning tool, not professional tax advice." />
+          </p>
           <p className="text-3xl font-black text-orange-900 mb-3">{formatter.format(taxReceipt.totalTax || 0)}</p>
           <div className="flex justify-between items-center text-xs border-t border-orange-200/50 pt-2 mt-2">
             <span className="text-orange-700 font-semibold">Effective Rate:</span>

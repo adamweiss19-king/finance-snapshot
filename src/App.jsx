@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState , useEffect} from 'react'
+import Tooltip from './components/Tooltip'
+import WelcomeModal from './components/WelcomeModal';
 import IncomeManager from './components/IncomeManager'
 import AssetManager from './components/AssetManager'
 import DebtManager from './components/DebtManager'
@@ -21,6 +23,7 @@ import ExecutionScorecard from './components/ExecutionScorecard';
 
 
 
+
 function App() {
   const [snapshots, setSnapshots] = useState(() => getSnapshots());
   const [activeYear, setActiveYear] = useState('Current Workspace'); // 'Current Workspace' or a specific year like '2024', '2025', etc.
@@ -29,6 +32,22 @@ function App() {
   const [isLocked, setIsLocked] = useState(false);
   const [viewingType, setViewingType] = useState('plan'); // 'plan' or 'actuals'
   const [isClosingOut, setIsClosingOut] = useState(false); 
+
+  // --- WELCOME MODAL STATE ---
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    // Check local storage to see if they've dismissed it before
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeV3');
+    if (!hasSeenWelcome) {
+      setShowWelcome(true);
+    }
+  }, []);
+
+  const closeWelcomeModal = () => {
+    localStorage.setItem('hasSeenWelcomeV3', 'true');
+    setShowWelcome(false);
+  };
 
   // --- THE CORE FINANCIAL DATA STATES (Fixed Variable Names to match Demo Data) ---
   const [age, setAge] = useState(30);
@@ -288,18 +307,29 @@ const createLinkedAsset = (contributionId, contributionName) => {
       <div className="max-w-[1600px] mx-auto w-full flex-grow">
         
         {/* --- GLOBAL APP TABS --- */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setCurrentView('Dashboard')}
+              className={`px-6 py-2 rounded-t-xl font-bold text-sm transition-colors ${currentView === 'Dashboard' ? 'bg-indigo-900 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+            >
+              📊 Planning Dashboard
+            </button>
+            <button 
+              onClick={() => setCurrentView('History')}
+              className={`px-6 py-2 rounded-t-xl font-bold text-sm transition-colors ${currentView === 'History' ? 'bg-indigo-900 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+            >
+              📚 Historical Ledger
+            </button>
+          </div>
+          
+          {/* THE NEW HELP BUTTON */}
           <button 
-            onClick={() => setCurrentView('Dashboard')}
-            className={`px-6 py-2 rounded-t-xl font-bold text-sm transition-colors ${currentView === 'Dashboard' ? 'bg-indigo-900 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+            onClick={() => setShowWelcome(true)}
+            className="text-xs font-bold text-slate-400 hover:text-indigo-500 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-slate-200"
           >
-            📊 Planning Dashboard
-          </button>
-          <button 
-            onClick={() => setCurrentView('History')}
-            className={`px-6 py-2 rounded-t-xl font-bold text-sm transition-colors ${currentView === 'History' ? 'bg-indigo-900 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
-          >
-            📚 Historical Ledger
+            <span className="bg-slate-300 text-slate-700 w-4 h-4 rounded-full flex items-center justify-center text-[10px]">?</span>
+            Help / Tour
           </button>
         </div>
 
@@ -455,10 +485,11 @@ const createLinkedAsset = (contributionId, contributionName) => {
                 <h2 className="text-3xl font-extrabold text-gray-900">
                   {isClosingOut ? `Final ${activeYear} Inventory (Dec 31st)` : `Step 1: Current Inventory`}
                 </h2>
-                <p className={`${isClosingOut ? 'text-red-500 font-bold' : 'text-gray-500'} mt-1`}>
+                <p className={`${isClosingOut ? 'text-red-500 font-bold' : 'text-gray-500'} mt-1 flex items-center`}>
                   {isClosingOut 
                     ? "Update these balances to exactly match your real-life bank and loan statements today." 
-                    : "Take stock of your starting line. Log your income streams, asset balances, and liabilities."}
+                    : "Log your exact starting asset/debt balances, and income sources as of January 1st to establish your baseline."}
+                  {!isClosingOut && <Tooltip message="This represents Day 1 of your financial year. Don't worry about what might change, just log a snapshot of your life right now." />}
                 </p>
               </div>
               
@@ -503,7 +534,10 @@ const createLinkedAsset = (contributionId, contributionName) => {
                 {/* SECTION 2: THE ACTION PLAN */}
                 <div className="mb-6 border-b border-gray-200 pb-4">
                   <h2 className="text-3xl font-extrabold text-gray-900">Step 2: Cash Flow Allocation</h2>
-                  <p className="text-gray-500 mt-1">Give your ${totalNetIncome.toLocaleString()} of net income a job.</p>
+                 <p className="text-gray-500 mt-1 flex items-center">
+                    Allocate your projected Net Income to expenses and investments. Goal: $0 Unallocated.
+                    <Tooltip message="Zero-based budgeting. Give every single dollar a job. Aim to bring this number to 0. (If you don't know where to add it, add it to your checking or savings account)." />
+                  </p>
                 </div>
                 
                 {/* FLOATING UNALLOCATED CASH ROW */}
@@ -590,6 +624,8 @@ const createLinkedAsset = (contributionId, contributionName) => {
         >
           ⚠️ Reset App & Delete All Data
         </button>
+        {/* THE WELCOME MODAL */}
+        <WelcomeModal isOpen={showWelcome} onClose={closeWelcomeModal} />
       </footer>
     </div>
   );
