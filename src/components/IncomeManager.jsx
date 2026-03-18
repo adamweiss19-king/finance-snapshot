@@ -1,10 +1,18 @@
 import React from 'react';
 
-const INCOME_TYPES = ['W-2 Salary', '1099', 'Bonus', 'Capital Gains', 'Interest/Dividends', 'Other'];
+const INCOME_TYPES = [
+  'W-2 Salary', 
+  'W-2 Bonus', 
+  'Self-Employment (1099)', 
+  'Passive (Interest/Dividends)', 
+  'Short Term Capital Gains',
+  'Long Term Capital Gains',
+  'Other'
+];
 
 function IncomeManager({ data, setData }) {
   const addIncome = () => {
-    setData([...data, { id: Date.now(), name: '', type: 'W-2 Salary', isTaxable: true, gross: 0, taxRate: 0 }]);
+    setData([...data, { id: Date.now(), name: '', type: 'W-2 Salary', isTaxable: true, gross: 0 }]);
   };
 
   const updateIncome = (id, field, value) => {
@@ -27,9 +35,12 @@ function IncomeManager({ data, setData }) {
         </button>
       </div>
 
+      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-6 text-xs text-blue-800 shadow-sm">
+        <strong>🧠 Smart Tax Engine Active:</strong> Taxes automatically calculated by Filing Status, State, and Income Type.
+      </div>
+
       <div className="space-y-4">
         {data.map((item) => {
-          const isTaxable = item.isTaxable !== false; 
           const type = item.type || 'W-2 Salary';
 
           return (
@@ -60,7 +71,8 @@ function IncomeManager({ data, setData }) {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+
+              <div className="flex items-center justify-between gap-2 mt-2">
                 <select 
                   value={type} 
                   onChange={(e) => updateIncome(item.id, 'type', e.target.value)} 
@@ -69,30 +81,19 @@ function IncomeManager({ data, setData }) {
                   {INCOME_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
 
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 cursor-pointer group/toggle">
-                    <span className="font-semibold text-gray-400">Taxable</span>
-                    {/* GREEN THEMED TOGGLE */}
-                    <button 
-                      type="button"
-                      onClick={() => updateIncome(item.id, 'isTaxable', !isTaxable)}
-                      className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${isTaxable ? 'bg-emerald-500' : 'bg-gray-300'}`}
-                    >
-                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isTaxable ? 'translate-x-4' : 'translate-x-1'}`} />
-                    </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={item.type === 'Other' ? item.isTaxable : true}
+                    disabled={item.type !== 'Other'}
+                    onChange={(e) => updateIncome(item.id, 'isTaxable', e.target.checked)}
+                    className={`w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 ${
+                      item.type !== 'Other' ? 'opacity-50 cursor-not-allowed bg-gray-200' : 'cursor-pointer'
+                    }`}
+                  />
+                  <label className={`text-[10px] font-bold uppercase tracking-tight ${item.type !== 'Other' ? 'text-gray-400' : 'text-gray-700'}`}>
+                    Taxable
                   </label>
-
-                  <div className={`flex items-center gap-1 transition-opacity duration-300 ${isTaxable ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
-                    {/* EXPANDED w-16 PERCENTAGE BOX */}
-                    <input 
-                      type="number" 
-                      value={item.taxRate === 0 ? '' : item.taxRate} 
-                      onChange={(e) => updateIncome(item.id, 'taxRate', parseFloat(e.target.value) || 0)} 
-                      className="w-16 text-right bg-slate-50 border border-slate-200 rounded p-1 text-xs text-slate-700 font-bold focus:ring-0" 
-                      placeholder="0"
-                    />
-                    <span className="font-bold text-slate-400">%</span>
-                  </div>
                 </div>
               </div>
 

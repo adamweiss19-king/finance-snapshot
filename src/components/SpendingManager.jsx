@@ -53,7 +53,7 @@ function SpendingManager({ data, setData }) {
                   type="text" 
                   value={item.name} 
                   onChange={(e) => updateExpense(item.id, 'name', e.target.value)} 
-                  placeholder="e.g. Rent, Groceries, HOA" 
+                  placeholder="e.g. Rent, Chase Expense or Debit Spending" 
                   className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
                 />
                 

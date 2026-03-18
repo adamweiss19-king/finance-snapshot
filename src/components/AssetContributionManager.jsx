@@ -1,15 +1,15 @@
 import React from 'react';
+import Tooltip from './Tooltip';
 
 const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0,
 });
 
-function AssetContributionManager({ data, setData, assets, age, filingStatus }) {
-  const addContribution = () => {
+function AssetContributionManager({ data, setData, assets, age, filingStatus, onCreateLinkedAsset }) {  const addContribution = () => {
     setData([...data, { id: Date.now(), name: '', amount: 0, linkedId: 'new' }]);
   };
 
-  const updateContribution = (id, field, value) => {
+  const updateContribution = (id, field, value) => {f
     setData(data.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
@@ -125,18 +125,33 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus }) 
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 w-full">
-                <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Destination:</span>
-                <select 
-                  value={item.linkedId || 'new'} 
-                  onChange={(e) => updateContribution(item.id, 'linkedId', e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 focus:ring-0 cursor-pointer flex-1 truncate"
-                >
-                  <option value="new">✨ New / Unlinked Account</option>
-                  {assets && assets.map(asset => (
-                    <option key={asset.id} value={asset.id}>{asset.name || 'Unnamed Asset'}</option>
-                  ))}
-                </select>
+              <div className="flex flex-col gap-2 w-full mt-2">
+                <div className="flex items-center gap-2 w-full">
+                  <span className="font-bold text-gray-400 tracking-widest text-[10px] flex items-center">
+                    Destination:
+                    <Tooltip message="Link to an existing account or create a new one." />
+                  </span>
+                  <select 
+                    value={item.linkedId || 'new'} 
+                    onChange={(e) => updateContribution(item.id, 'linkedId', e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 focus:ring-0 cursor-pointer flex-1 truncate"
+                  >
+                    <option value="new">✨ New / Unlinked Account</option>
+                    {assets && assets.map(asset => (
+                      <option key={asset.id} value={asset.id}>{asset.name || 'Unnamed Asset'}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* THE NEW AUTO-CREATE BUTTON */}
+                {(!item.linkedId || item.linkedId === 'new') && (
+                  <button 
+                    onClick={() => onCreateLinkedAsset(item.id, item.name)}
+                    className="w-full text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 py-1.5 rounded-md transition-colors shadow-sm"
+                  >
+                    + Create a New Account for this Asset in the Foundation Section - (section 1)
+                  </button>
+                )}
               </div>
             </div>
 

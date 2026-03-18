@@ -4,9 +4,10 @@ const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0,
 });
 
-function DebtContributionManager({ data, setData, debts }) {
+function DebtContributionManager({ data, setData, debts, onCreateLinkedDebt }) {
   const addContribution = () => {
-    setData([...data, { id: Date.now(), name: '', amount: 0, type: 'Mandatory', linkedId: '' }]);
+    // Default to 'new' so the button appears immediately
+    setData([...data, { id: Date.now(), name: '', amount: 0, type: 'Mandatory', linkedId: 'new' }]);
   };
 
   const updateContribution = (id, field, value) => {
@@ -66,6 +67,7 @@ function DebtContributionManager({ data, setData, debts }) {
                   <span className="text-[9px] uppercase tracking-widest text-red-400 font-bold mr-1">Amount</span>
                 </div>
               </div>
+              
               {/* Bottom Row: Type Pill and Target Link */}
               <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
                 
@@ -84,18 +86,30 @@ function DebtContributionManager({ data, setData, debts }) {
                   <option value="Discretionary">Discretionary</option>
                 </select>
 
-                <div className="flex items-center gap-2 flex-1">
-                  <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px] hidden sm:inline">Target:</span>
-                  <select 
-                    value={item.linkedId || ''} 
-                    onChange={(e) => updateContribution(item.id, 'linkedId', e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 focus:ring-0 cursor-pointer flex-1 truncate"
-                  >
-                    <option value="" disabled>-- Select a Debt --</option>
-                    {debts && debts.map(debt => (
-                      <option key={debt.id} value={debt.id}>{debt.name || 'Unnamed Debt'}</option>
-                    ))}
-                  </select>
+                <div className="flex flex-col gap-2 flex-1 mt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px] hidden sm:inline">Target:</span>
+                    <select 
+                      value={item.linkedId || 'new'} 
+                      onChange={(e) => updateContribution(item.id, 'linkedId', e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 focus:ring-0 cursor-pointer flex-1 truncate"
+                    >
+                      <option value="new">✨ New / Unlinked Debt</option>
+                      {debts && debts.map(debt => (
+                        <option key={debt.id} value={debt.id}>{debt.name || 'Unnamed Debt'}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* THE NEW AUTO-CREATE BUTTON */}
+                  {(!item.linkedId || item.linkedId === 'new') && (
+                    <button 
+                      onClick={() => onCreateLinkedDebt(item.id, item.name)}
+                      className="w-full text-[10px] uppercase tracking-widest font-black text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 py-1.5 rounded-md transition-colors shadow-sm"
+                    >
+                      + Create $0 Debt in Foundation
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -108,7 +122,7 @@ function DebtContributionManager({ data, setData, debts }) {
         })}
       </div>
 
-        <div className="mt-auto flex justify-between items-center bg-red-50 p-5 rounded-2xl border-2 border-red-200 shadow-sm">
+      <div className="mt-auto flex justify-between items-center bg-red-50 p-5 rounded-2xl border-2 border-red-200 shadow-sm">
         <span className="text-xs uppercase font-bold tracking-widest text-red-800">Total Scheduled Payments</span>
         <span className="text-2xl font-black text-red-600">{formatter.format(totalContributions)}</span>
       </div>
