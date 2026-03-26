@@ -9,7 +9,7 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus, on
     setData([...data, { id: Date.now(), name: '', amount: 0, linkedId: 'new' }]);
   };
 
-  const updateContribution = (id, field, value) => {f
+  const updateContribution = (id, field, value) => {
     setData(data.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
