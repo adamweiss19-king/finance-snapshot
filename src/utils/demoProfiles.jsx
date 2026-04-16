@@ -69,7 +69,7 @@ export const demoProfiles = {
         assetData: [
           { id: 101, name: 'Chase Checking', bucket: 'Cash', category: 'Bank Account/Savings', balance: 9000, growth: 0 },
           { id: 102, name: 'Fidelity 401(k)', bucket: 'Retirement', category: '401k', balance: 9200, growth: 7 },
-          { id: 103, name: 'New Roth IRA', bucket: 'Retirement', category: 'Roth IRA', balance: 0, growth: 7, isNew: true }
+          { id: 103, name: 'New Roth IRA', bucket: 'Retirement', category: 'Roth IRA', balance: 0, growth: 7 }
         ],
         debtData: [{ id: 201, name: 'Federal Student Loan', balance: 21500, interestRate: 5.5, linkedAssetId: '' }],
         assetContributions: [
@@ -149,7 +149,7 @@ export const demoProfiles = {
           { id: 101, name: 'Ally Savings', bucket: 'Cash', category: 'Bank Account/Savings', balance: 16200, growth: 4 },
           { id: 102, name: 'Vanguard 401k', bucket: 'Retirement', category: '401k', balance: 100500, growth: 7 },
           { id: 103, name: 'Roth IRA', bucket: 'Retirement', category: 'Roth IRA', balance: 40200, growth: 7 },
-          { id: 104, name: 'House Downpayment Fund', bucket: 'Cash', category: 'Bank Account/Savings', balance: 0, growth: 4, isNew: true }
+          { id: 104, name: 'House Downpayment Fund', bucket: 'Cash', category: 'Bank Account/Savings', balance: 0, growth: 4 }
         ],
         debtData: [],
         assetContributions: [
@@ -236,7 +236,7 @@ export const demoProfiles = {
           { id: 101, name: 'Joint Savings', bucket: 'Cash', category: 'Bank Account/Savings', balance: 27000, growth: 4 },
           { id: 102, name: 'Combined 401(k)s', bucket: 'Retirement', category: '401k', balance: 245300, growth: 7 },
           { id: 103, name: 'Suburban House', bucket: 'Physical Assets', category: 'Primary Residence', balance: 477400, growth: 3 },
-          { id: 104, name: '529 College Fund', bucket: 'Investment (Non-Retirement)', category: 'Other', balance: 0, growth: 6, isNew: true }
+          { id: 104, name: '529 College Fund', bucket: 'Investment (Non-Retirement)', category: 'Other', balance: 0, growth: 6 }
         ],
         debtData: [{ id: 201, name: 'Primary Mortgage', balance: 295500, interestRate: 4.2, linkedAssetId: '103' }],
         assetContributions: [

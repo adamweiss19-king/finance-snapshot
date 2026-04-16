@@ -1,6 +1,7 @@
 import React from 'react';
+import BaseAccountRow from './ui/BaseAccountRow';
 
-function DebtManager({ data, setData, isClosingOut, contributions, planSnapshot }) {
+function DebtManager({ data, setData, isClosingOut, contributions, planSnapshot, isLocked }) {
   const addDebt = () => {
     setData([...data, { id: Date.now(), name: '', balance: 0, interestRate: 0 }]);
   };
@@ -13,160 +14,32 @@ function DebtManager({ data, setData, isClosingOut, contributions, planSnapshot 
     setData(data.filter(d => d.id !== id));
   };
 
-  return (
+return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-end mb-4 pr-1">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">Debt Manager</h2>
-          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">
-            {isClosingOut ? 'End of Year Review' : 'Current Liabilities'}
-          </p>
-        </div>
-        {!isClosingOut && (
-          <button onClick={addDebt} className="text-red-600 hover:text-red-800 font-bold text-sm transition flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-lg">
-            + Add
+      <div className="mb-4 pr-1">
+        <h2 className="text-xl font-bold text-gray-800">Debt Manager</h2>
+        <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">
+          {isClosingOut ? 'End of Year Review' : 'Current Liabilities'}
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[40vh] space-y-4 mb-4 pb-2 pr-1">
+        {data.map((debt) => (
+          <BaseAccountRow 
+            key={debt.id} item={debt} type="debt" isClosingOut={isClosingOut}
+            contributions={contributions} planSnapshot={planSnapshot?.debtData} 
+            onUpdate={updateDebt} onRemove={removeDebt} isLocked={isLocked}
+          />
+        ))}
+      </div>
+
+      {!isClosingOut && (
+        <div className="mt-auto shrink-0 mb-2">
+          <button onClick={addDebt} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 hover:text-slate-600 hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 font-bold text-sm shadow-sm">
+            <span className="text-xl leading-none">+</span> Add Debt
           </button>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        {data.map((debt) => {
-          
-          // --- REVIEW MODE MATH (Reversed for Debts!) ---
-          let initialAmount = 0;
-          let plannedTarget = 0;
-
-          if (isClosingOut) {
-            const originalDebt = planSnapshot?.debtData?.find(d => d.id === debt.id);
-            initialAmount = originalDebt ? Number(originalDebt.balance) : 0;
-            
-            const intRate = originalDebt ? Number(originalDebt.interestRate) : Number(debt.interestRate);
-            const interestAmount = initialAmount * (intRate / 100);
-            
-            const linkedPayments = (contributions || [])
-              .filter(c => String(c.linkedId) === String(debt.id))
-              .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-            
-            // Floor it at 0 so we don't show negative target debt
-            plannedTarget = Math.max(0, initialAmount + interestAmount - linkedPayments);
-          }
-
-          return (
-            <div key={debt.id} className={`bg-white p-4 rounded-2xl border ${isClosingOut ? 'border-red-200 shadow-md ring-1 ring-red-50' : 'border-gray-100 shadow-sm'} transition-all relative group`}>
-              
-              {isClosingOut ? (
-                // ==========================================
-                // UI STATE A: THE "CLOSE OUT" REVIEW ROW
-                // ==========================================
-                <div className="flex flex-col gap-3">
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-2">
-                    <span className="text-lg font-bold text-gray-900">{debt.name || "Unnamed Debt"}</span>
-                    <span className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-1 rounded uppercase tracking-wider">Review</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-end gap-2">
-                    {/* Read-Only Data */}
-                    <div className="flex gap-6">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Start (Jan 1)</span>
-                        <span className="text-sm font-semibold text-slate-600">${initialAmount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-1">Target</span>
-                        <span className="text-sm font-bold text-red-600">${Math.round(plannedTarget).toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Actionable Input */}
-                    <div className="flex flex-col items-end shrink-0">
-                      <span className="text-[10px] uppercase tracking-widest text-red-500 font-black mb-1">Actual (Dec 31)</span>
-                      <div className="flex items-center justify-end text-right bg-red-50 px-2 py-1 rounded-lg border border-red-200">
-                        <span className="text-sm font-black text-red-600 mr-0.5">$</span>
-                        <input 
-                          type="text" 
-                          value={debt.balance === 0 ? '' : debt.balance.toLocaleString('en-US')} 
-                          onChange={(e) => {
-                            const cleanValue = e.target.value.replace(/,/g, '');
-                            updateDebt(debt.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
-                          }} 
-                          placeholder={Math.round(plannedTarget).toString()} 
-                          className="text-lg font-black text-red-700 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-red-300/50 w-24" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // ==========================================
-                // UI STATE B: STANDARD PLANNING ROW
-                // ==========================================
-                <>
-                  <div className="flex justify-between items-start border-b border-gray-50 pb-3 mb-3 gap-2">
-                    
-                    {/* Left Side: Name and New Badge */}
-                    <div className="flex items-center gap-2 w-full">
-                      <input 
-                        type="text" 
-                        value={debt.name} 
-                        onChange={(e) => updateDebt(debt.id, 'name', e.target.value)} 
-                        placeholder="e.g. Car Loan" 
-                        className="text-lg font-bold text-gray-900 border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300" 
-                      />
-                      {debt.balance === 0 && (
-                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter shrink-0">
-                          New
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Right Side: Balance Input */}
-                    <div className="flex flex-col items-end shrink-0">
-                      <div className="flex items-center justify-end text-right">
-                        <span className="text-lg font-black text-red-700 mr-0.5">$</span>
-                        <input
-                          type="text"
-                          value={debt.balance === 0 ? '' : debt.balance.toLocaleString('en-US')}
-                          onChange={(e) => {
-                            const cleanValue = e.target.value.replace(/,/g, '');
-                            updateDebt(debt.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0);
-                          }}
-                          placeholder="0"
-                          style={{ width: `${debt.balance ? debt.balance.toLocaleString('en-US').length + 0.5 : 2}ch` }}
-                          className="text-xl font-black text-red-700 border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200" 
-                        />
-                      </div>
-                      <span className="text-[9px] uppercase tracking-widest text-red-400 font-bold mr-1">Starting Balance</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-gray-400">Interest Rate:</span>
-                      <div className="flex items-center gap-1">
-                        <input 
-                          type="number" 
-                          value={debt.interestRate === 0 ? '' : debt.interestRate} 
-                          onChange={(e) => updateDebt(debt.id, 'interestRate', parseFloat(e.target.value) || 0)} 
-                          className="w-16 text-right bg-slate-50 border border-slate-200 rounded p-1 text-xs text-slate-700 font-bold focus:ring-0" 
-                          placeholder="0"
-                        />
-                        <span className="font-bold text-slate-400">%</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {!isClosingOut && (
-                <button 
-                  onClick={() => removeDebt(debt.id)} 
-                  className="absolute -top-2 -right-2 bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
-                >✕</button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
