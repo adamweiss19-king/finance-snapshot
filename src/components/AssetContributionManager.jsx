@@ -21,16 +21,19 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus, on
 
   const totalContributions = data.reduce((acc, item) => acc + (item.amount || 0), 0);
 
-  // --- DYNAMIC IRS LIMITS (2024/2025) ---
+ // --- DYNAMIC IRS LIMITS (2024/2025) ---
   const isCatchupAge = age >= 50;
   const isHsaCatchupAge = age >= 55;
   const isFamily = filingStatus === 'Married Filing Jointly';
+  
+  // If married, we assume dual-income household and double the base contribution limits
+  const multiplier = isFamily ? 2 : 1; 
 
   const limits = {
-    '401k': 23000 + (isCatchupAge ? 7500 : 0), // $30,500 if 50+
-    'IRA': 7000 + (isCatchupAge ? 1000 : 0),   // $8,000 if 50+
-    'HSA': (isFamily ? 8300 : 4150) + (isHsaCatchupAge ? 1000 : 0),
-    'FSA': 3200 // Usually static per employer
+    '401k': (23000 * multiplier) + (isCatchupAge ? (7500 * multiplier) : 0),
+    'IRA': (7000 * multiplier) + (isCatchupAge ? (1000 * multiplier) : 0),
+    'HSA': (isFamily ? 8300 : 4150) + (isHsaCatchupAge ? (1000 * multiplier) : 0),
+    'FSA': 3200 * multiplier 
   };
 
   // Calculate totals per asset category
@@ -46,11 +49,13 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus, on
 
   // Check if any categories exceed the DYNAMIC limits
   const warnings = [];
+  const entityText = isFamily ? 'combined household' : 'individual';
+
   Object.keys(categoryTotals).forEach(category => {
     // 401k Check
     if (category === '401k' && categoryTotals[category] > limits['401k']) {
       const catchupText = isCatchupAge ? ' (includes 50+ catch-up)' : '';
-      warnings.push(`You have allocated ${formatter.format(categoryTotals[category])} to 401k accounts. Your legal individual limit is ${formatter.format(limits['401k'])}${catchupText}. (Employer matches do not count).`);
+      warnings.push(`You have allocated ${formatter.format(categoryTotals[category])} to 401k accounts. Your legal ${entityText} limit is ${formatter.format(limits['401k'])}${catchupText}. (Employer matches do not count).`);
     }
     
     // IRA Check (Combined Traditional + Roth)
@@ -58,7 +63,7 @@ function AssetContributionManager({ data, setData, assets, age, filingStatus, on
     if ((category === 'IRA' || category === 'Roth IRA') && totalIRA > limits['IRA']) {
       if (!warnings.some(w => w.includes('IRA accounts'))) {
         const catchupText = isCatchupAge ? ' (includes 50+ catch-up)' : '';
-        warnings.push(`You have allocated ${formatter.format(totalIRA)} to IRA accounts. Your combined limit for all IRAs is ${formatter.format(limits['IRA'])}${catchupText}.`);
+        warnings.push(`You have allocated ${formatter.format(totalIRA)} to IRA accounts. Your ${entityText} limit for all IRAs is ${formatter.format(limits['IRA'])}${catchupText}.`);
       }
     }
 

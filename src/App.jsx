@@ -392,17 +392,17 @@ const [snapshots, setSnapshots] = useState(() => {
         {currentView === 'Dashboard' ? (
           <>
             {/* TIME TRAVEL NAV BAR */}
-            {/* UNIFIED WORKSPACE SELECTOR */}
-              <div className={`sticky top-0 z-50 mb-6 px-6 py-4 rounded-b-2xl rounded-tr-2xl flex flex-wrap justify-between items-center shadow-xl border transition-colors duration-500 backdrop-blur-md ${isLocked ? 'bg-slate-900/95 border-red-500/50' : 'bg-slate-900/95 border-slate-800'}`}>              
+      {/* UNIFIED WORKSPACE SELECTOR */}
+              <div className={`sticky top-0 z-50 mb-6 px-3 md:px-6 py-2 md:py-4 rounded-b-2xl rounded-tr-2xl flex items-center justify-between gap-2 shadow-xl border transition-colors duration-500 backdrop-blur-md ${isLocked ? 'bg-slate-900/95 border-red-500/50' : 'bg-slate-900/95 border-slate-800'}`}>              
                 
                 {/* PILL SELECTOR */}
-                <div className="flex items-center bg-slate-800/80 border border-slate-700 rounded-xl p-1 shadow-inner">
-                  <span className="px-3 text-lg opacity-80">📂</span>
+                <div className="flex items-center bg-slate-800/80 border border-slate-700 rounded-xl p-1 shadow-inner flex-shrink min-w-0">
+                  <span className="hidden sm:inline px-2 text-lg opacity-80">📂</span>
                   
                   <select
                     value={activeYear}
                     onChange={(e) => handleLoadSnapshot(e.target.value)}
-                    className="bg-transparent border-none py-2 pr-6 pl-1 text-sm font-bold text-white focus:ring-0 cursor-pointer outline-none"
+                    className="bg-transparent border-none py-1.5 pr-6 pl-2 text-sm font-bold text-white focus:ring-0 cursor-pointer outline-none truncate"
                   >
                     {Object.keys(snapshots).sort().reverse().map(year => (
                       <option key={year} value={year} className="bg-slate-800 text-white">
@@ -411,21 +411,21 @@ const [snapshots, setSnapshots] = useState(() => {
                     ))}
                   </select>
                   
-                  <div className="flex items-center border-l border-slate-700 pl-3 ml-1 mr-1 gap-1">
-                    <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-md ${isLocked ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                  <div className="flex items-center border-l border-slate-700 pl-2 ml-1 gap-1 shrink-0">
+                    <span className={`hidden sm:inline-block px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-md ${isLocked ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
                       {isLocked ? 'Closed' : 'Open'}
                     </span>
-                    <button onClick={handleRenameYear} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-xs">✏️</button>
-                    <button onClick={handleDeleteYear} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-red-500 hover:text-red-400 transition-all font-bold">✕</button>
+                    <button onClick={handleRenameYear} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-xs" title="Rename Year">✏️</button>
+                    <button onClick={handleDeleteYear} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-red-500 hover:text-red-400 transition-all font-bold" title="Delete Year">✕</button>
                   </div>
                 </div>
                 
                 {/* ACTIONS */}
-                <div className="flex gap-3">
+                <div className="flex gap-2 shrink-0">
                   {!isLocked && !isClosingOut && (
                     <>
-                      <button onClick={handleSmartSave} className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
-                        💾 Save Changes
+                      <button onClick={handleSmartSave} className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-extrabold px-3 md:px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center justify-center" title="Save Changes">
+                        💾 <span className="hidden md:inline ml-2">Save Changes</span>
                       </button>
                       {/* Only show Close Out if we aren't in a fresh/empty state */}
                       {incomeData.length > 0 && (
@@ -435,9 +435,9 @@ const [snapshots, setSnapshots] = useState(() => {
                             setDebtData(debtData.map(d => ({ ...d, balance: 0 })));
                             setIsClosingOut(true);
                           }} 
-                          className="bg-red-500 hover:bg-red-400 text-white font-extrabold px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2"
+                          className="bg-red-500 hover:bg-red-400 text-white font-extrabold px-3 md:px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center justify-center" title={`Close Out ${activeYear}`}
                         >
-                          🔒 Close Out {activeYear}
+                          🔒 <span className="hidden md:inline ml-2">Close Out {activeYear}</span>
                         </button>
                       )}
                     </>
@@ -445,14 +445,15 @@ const [snapshots, setSnapshots] = useState(() => {
 
                   {isLocked && (
                     <>
-                      <button onClick={() => { setIsLocked(false); setIsClosingOut(true); }} className="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 font-bold px-5 py-2 rounded-xl text-sm transition-all shadow-sm">
-                        🔓 Unlock Actuals
+                      <button onClick={() => { setIsLocked(false); setIsClosingOut(true); }} className="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 font-bold px-3 md:px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center justify-center" title="Unlock Actuals">
+                        🔓 <span className="hidden md:inline ml-2">Unlock Actuals</span>
                       </button>
                       <button 
                         onClick={snapshots[(parseInt(activeYear) + 1).toString()] ? () => handleLoadSnapshot((parseInt(activeYear) + 1).toString()) : startNextYear} 
-                        className="bg-blue-500 hover:bg-blue-400 text-white font-black px-5 py-2 rounded-xl text-sm transition-all shadow-sm"
+                        className="bg-blue-500 hover:bg-blue-400 text-white font-black px-3 md:px-5 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center justify-center"
+                        title={snapshots[(parseInt(activeYear) + 1).toString()] ? `Go to ${parseInt(activeYear) + 1}` : `Start ${parseInt(activeYear) + 1} Plan`}
                       >
-                        ➡️ {snapshots[(parseInt(activeYear) + 1).toString()] ? `Go to ${parseInt(activeYear) + 1}` : `Start ${parseInt(activeYear) + 1} Plan`}
+                        ➡️ <span className="hidden md:inline ml-2">{snapshots[(parseInt(activeYear) + 1).toString()] ? `Go to ${parseInt(activeYear) + 1}` : `Start ${parseInt(activeYear) + 1} Plan`}</span>
                       </button>
                     </>
                   )}
@@ -466,7 +467,7 @@ const [snapshots, setSnapshots] = useState(() => {
                 <p className="text-indigo-700 text-xs">Instantly load realistic V2 profiles to see how the math works.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {['singleNewHire', 'singleMidCareer', 'familyMidCareer'].map(profile => (
+                {['singleNewHire', 'singleMidCareer', 'familyMidCareer', 'complexEdgeCase'].map(profile => (
                   <button key={profile} onClick={() => loadProfile(profile)} className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition capitalize">
                     {profile.replace(/([A-Z])/g, ' $1')}
                   </button>
