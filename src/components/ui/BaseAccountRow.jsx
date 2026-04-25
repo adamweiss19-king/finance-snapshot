@@ -68,7 +68,7 @@ function BaseAccountRow({
               <span className={`text-[10px] uppercase tracking-widest font-black mb-1 ${theme.textHighlight}`}>Actual (Dec 31)</span>
               <div className={`flex items-center justify-end text-right px-2 py-1 rounded-lg border ${theme.bgHighlight} ${theme.borderHighlight}`}>
                 <span className={`text-sm font-black mr-0.5 ${theme.textHighlight}`}>$</span>
-                <input type="text" value={item.balance === 0 ? '' : item.balance.toLocaleString('en-US')} onChange={(e) => { const cleanValue = e.target.value.replace(/,/g, ''); onUpdate(item.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0); }} placeholder={Math.round(plannedTarget).toString()} className={`text-lg font-black border-none p-0 focus:ring-0 text-right bg-transparent w-24 ${theme.textHighlight}`} />
+                <input type="text" inputMode='decimal' value={item.balance === 0 ? '' : item.balance.toLocaleString('en-US')} onChange={(e) => { const cleanValue = e.target.value.replace(/,/g, ''); onUpdate(item.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0); }} placeholder={Math.round(plannedTarget).toString()} className={`text-lg font-black border-none p-0 focus:ring-0 text-right bg-transparent w-24 ${theme.textHighlight}`} />
               </div>
             </div>
           </div>
@@ -77,14 +77,14 @@ function BaseAccountRow({
         <>
           <div className="flex justify-between items-start border-b border-gray-50 pb-3 mb-3 gap-2">
             <div className="flex items-center gap-2 w-full">
-              <input type="text" disabled={isLocked} value={item.name} onChange={(e) => onUpdate(item.id, 'name', e.target.value)} placeholder={isAsset ? "e.g. Chase Savings" : "e.g. Car Loan"} className={`text-lg font-bold border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300 disabled:cursor-not-allowed ${theme.text}`} />
+              <input type="text" inputMode='decimal' disabled={isLocked} value={item.name} onChange={(e) => onUpdate(item.id, 'name', e.target.value)} placeholder={isAsset ? "e.g. Chase Savings" : "e.g. Car Loan"} className={`text-lg font-bold border-none p-0 focus:ring-0 w-full bg-transparent placeholder-gray-300 disabled:cursor-not-allowed ${theme.text}`} />
               {item.balance === 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter shrink-0 ${theme.badge}`}>New</span>}
             </div>
             
             <div className="flex flex-col items-end shrink-0">
               <div className="flex items-center justify-end text-right">
                 <span className={`text-lg font-black mr-0.5 ${theme.textHighlight}`}>$</span>
-                <input type="text" disabled={isLocked} value={item.balance === 0 ? '' : item.balance.toLocaleString('en-US')} onChange={(e) => { const cleanValue = e.target.value.replace(/,/g, ''); onUpdate(item.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0); }} placeholder="0" style={{ width: `${item.balance ? item.balance.toLocaleString('en-US').length + 0.5 : 2}ch` }} className={`text-xl font-black border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200 disabled:cursor-not-allowed ${theme.textHighlight}`} />
+                <input type="text" inputMode='decimal' disabled={isLocked} value={item.balance === 0 ? '' : item.balance.toLocaleString('en-US')} onChange={(e) => { const cleanValue = e.target.value.replace(/,/g, ''); onUpdate(item.id, 'balance', cleanValue === '' ? 0 : parseFloat(cleanValue) || 0); }} placeholder="0" style={{ width: `${item.balance ? item.balance.toLocaleString('en-US').length + 0.5 : 2}ch` }} className={`text-xl font-black border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200 disabled:cursor-not-allowed ${theme.textHighlight}`} />
               </div>
               <span className={`text-[9px] uppercase tracking-widest font-bold mr-1 ${theme.textHighlight.replace('text-', 'text-opacity-50 text-')}`}>Starting Balance</span>
             </div>
@@ -107,7 +107,7 @@ function BaseAccountRow({
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="font-semibold text-gray-400">{theme.rateLabel}</span>
               <div className="flex items-center gap-1">
-                <input type="number" disabled={isLocked} value={item[isAsset ? 'growth' : 'interestRate'] === 0 ? '' : item[isAsset ? 'growth' : 'interestRate']} onChange={(e) => onUpdate(item.id, isAsset ? 'growth' : 'interestRate', parseFloat(e.target.value) || 0)} className="w-16 text-right bg-slate-50 border border-slate-200 rounded p-1 text-xs text-slate-700 font-bold focus:ring-0 disabled:cursor-not-allowed" placeholder="0" />
+                <input type="number" inputMode='decimal' disabled={isLocked} value={item[isAsset ? 'growth' : 'interestRate'] === 0 ? '' : item[isAsset ? 'growth' : 'interestRate']} onChange={(e) => onUpdate(item.id, isAsset ? 'growth' : 'interestRate', parseFloat(e.target.value) || 0)} className="w-16 text-right bg-slate-50 border border-slate-200 rounded p-1 text-xs text-slate-700 font-bold focus:ring-0 disabled:cursor-not-allowed" placeholder="0" />
                 <span className="font-bold text-slate-400">%</span>
               </div>
             </div>

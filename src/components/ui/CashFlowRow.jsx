@@ -38,7 +38,7 @@ function CashFlowRow({
         <div className="flex flex-col items-end shrink-0">
           <div className="flex items-center justify-end text-right">
             <span className={`text-lg font-black mr-0.5 ${theme.textHighlight}`}>$</span>
-            <input type="text" disabled={isLocked} value={currentValue === 0 ? '' : currentValue.toLocaleString('en-US')} onChange={(e) => { const cleanValue = e.target.value.replace(/,/g, ''); onUpdate(item.id, valueField, cleanValue === '' ? 0 : parseFloat(cleanValue) || 0); }} placeholder="0" style={{ width: `${currentValue ? currentValue.toLocaleString('en-US').length + 0.5 : 2}ch` }} className={`text-xl font-black border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200 disabled:cursor-not-allowed ${theme.textHighlight}`} />
+            <input type="text" inputMode='decimal' disabled={isLocked} value={currentValue === 0 ? '' : currentValue.toLocaleString('en-US')} onChange={(e) => { const cleanValue = e.target.value.replace(/,/g, ''); onUpdate(item.id, valueField, cleanValue === '' ? 0 : parseFloat(cleanValue) || 0); }} placeholder="0" style={{ width: `${currentValue ? currentValue.toLocaleString('en-US').length + 0.5 : 2}ch` }} className={`text-xl font-black border-none p-0 focus:ring-0 text-right bg-transparent placeholder-gray-200 disabled:cursor-not-allowed ${theme.textHighlight}`} />
           </div>
           <span className={`text-[9px] uppercase tracking-widest font-bold mr-1 mt-1 ${theme.textHighlight.replace('text-', 'text-opacity-50 text-')}`}>{isIncome ? 'Gross Annual' : 'Annual Amount'}</span>
         </div>
