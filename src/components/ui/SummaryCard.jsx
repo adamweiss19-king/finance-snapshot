@@ -13,10 +13,10 @@ function SummaryCard({ title, amount, subtextLabel, subtextValue, themeColor, to
 
   return (
     <div className={`${theme.bg} rounded-2xl p-5 border ${theme.border}`}>
-      <p className={`${theme.textTitle} text-xs font-bold uppercase tracking-wider mb-1 flex items-center`}>
+      <div className={`${theme.textTitle} text-xs font-bold uppercase tracking-wider mb-1 flex items-center`}>
         {title}
         {tooltip && <Tooltip message={tooltip} />}
-      </p>
+      </div>
       <p className={`text-3xl font-black ${theme.textValue} mb-3`}>
         ${Math.round(amount).toLocaleString('en-US')}
       </p>

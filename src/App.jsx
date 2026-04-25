@@ -512,12 +512,12 @@ const [snapshots, setSnapshots] = useState(() => {
                 <h2 className="text-3xl font-extrabold text-gray-900">
                   {isClosingOut ? `Final ${activeYear} Inventory (Dec 31st)` : `Step 1: Current Inventory`}
                 </h2>
-                <p className={`${isClosingOut ? 'text-red-500 font-bold' : 'text-gray-500'} mt-1 flex items-center`}>
+                <div className={`${isClosingOut ? 'text-red-500 font-bold' : 'text-gray-500'} mt-1 flex items-center`}>
                   {isClosingOut 
                     ? "Update these balances to exactly match your real-life bank and loan statements today. Plus any unplanned income." 
                     : "Log your exact starting asset/debt balances, and income sources as of January 1st to establish your baseline."}
                   {!isClosingOut && <Tooltip message="This represents Day 1 of your financial year. Don't worry about what might change, just log a snapshot of your life right now." />}
-                </p>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -545,10 +545,10 @@ const [snapshots, setSnapshots] = useState(() => {
 
                 <div className="mb-6 border-b border-gray-200 pb-4">
                   <h2 className="text-3xl font-extrabold text-gray-900">Step 2: Cash Flow Allocation</h2>
-                  <p className="text-gray-500 mt-1 flex items-center">
+                  <div className="text-gray-500 mt-1 flex items-center">
                     Allocate your projected Net Income to expenses and investments. Goal: $0 Unallocated.
                     <Tooltip message="Zero-based budgeting. Give every single dollar a job. Aim to bring this number to 0." />
-                  </p>
+                  </div>
                 </div>
                 
                 <UnallocatedCashTracker unallocatedCashFlow={unallocatedCashFlow} totalNetIncome={totalNetIncome} />
