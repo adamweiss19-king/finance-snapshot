@@ -9,6 +9,7 @@ const INCOME_TYPES = [
   'Passive (Interest/Dividends)', 
   'Short Term Capital Gains',
   'Long Term Capital Gains',
+  'Windfall',
   'Other'
 ];
 

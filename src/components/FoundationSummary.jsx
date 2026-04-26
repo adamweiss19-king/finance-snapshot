@@ -2,13 +2,6 @@ import React from 'react';
 import Tooltip from './ui/Tooltip';
 import SummaryCard from './ui/SummaryCard';
 
-const formatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
 function FoundationSummary({ 
   incomeData = [], 
   taxReceipt = {}, 
@@ -48,11 +41,12 @@ function FoundationSummary({
           tooltip="Estimated using the standard deduction and progressive IRS tax brackets. This is a planning tool, not professional tax advice."
         />
         <SummaryCard 
-          title="Investments" 
+          title="Liquid Investments" 
           amount={totalInvestments} 
           subtextLabel="Savings Rate" 
           subtextValue={`${totalIncome > 0 ? Math.round((totalInvestments / totalIncome) * 100) : 0}%`} 
           themeColor="sky" 
+          tooltip="Cash flow directed toward the market, retirement, and cash savings. This excludes real estate values and mortgage payments, which are tracked separately."
         />
         <SummaryCard 
           title="Debt Service" 

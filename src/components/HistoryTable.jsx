@@ -30,7 +30,21 @@ function HistoryTable({ snapshots }) {
 
   // Pre-calculate Macro totals for every year
   const macroData = years.map(year => {
-    const d = getYearData(year); // Use the new helper
+    const d = getYearData(year); 
+    const isProjected = snapshots[year]?.status === 'open';
+
+    // IF OPEN PLAN: Use the saved EOY projections (if they exist)
+    if (isProjected && d.projections) {
+      return {
+        year,
+        income: sumData(d.incomeData, 'gross'),
+        assets: d.projections.totalAssetEOY,
+        debts: d.projections.totalDebtEOY,
+        netWorth: d.projections.projectedNetWorth,
+      };
+    }
+
+    // IF CLOSED ACTUALS (or no projections saved): Use the raw balances
     const assets = sumData(d.assetData, 'balance');
     const debts = sumData(d.debtData, 'balance');
     return {
