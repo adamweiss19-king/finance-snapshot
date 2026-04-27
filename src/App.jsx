@@ -11,7 +11,7 @@ import { useFinancialState } from './hooks/useFinancialState';
 import Tooltip from './components/ui/Tooltip';
 import WelcomeModal from './components/ui/WelcomeModal'; // Now used as a full Tab!
 import WorkspaceLobby from './components/WorkspaceLobby';
-import HomeownerWizard from './components/HomeownerWizard';
+import HomeownerWizard from './components/HomeOwnerWizard';
 
 // --- FEATURE MANAGERS (Data Entry) ---
 import IncomeManager from './components/IncomeManager';
