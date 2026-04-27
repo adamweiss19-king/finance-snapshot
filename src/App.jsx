@@ -389,7 +389,7 @@ function App() {
               W
             </div>
             <span className="font-black text-slate-800 text-xl tracking-tight hidden sm:block">
-              Fin<span className="text-indigo-600">Shot</span>
+              Fin<span className="text-indigo-600">Shots</span>
             </span>
           </div>
 
