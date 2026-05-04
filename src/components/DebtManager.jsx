@@ -1,7 +1,7 @@
 import React from 'react';
 import BaseAccountRow from './ui/BaseAccountRow';
 
-function DebtManager({ data, setData, isClosingOut, contributions, planSnapshot, isLocked }) {
+function DebtManager({ data, setData, isClosingOut, contributions, planSnapshot, isLocked, projectedDebts }) {
   const addDebt = () => {
     setData([...data, { id: Date.now(), name: '', balance: 0, interestRate: 0 }]);
   };
@@ -24,13 +24,20 @@ return (
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[40vh] space-y-4 mb-4 pb-2 pr-1">
-        {data.map((debt) => (
-          <BaseAccountRow 
-            key={debt.id} item={debt} type="debt" isClosingOut={isClosingOut}
-            contributions={contributions} planSnapshot={planSnapshot?.debtData} 
-            onUpdate={updateDebt} onRemove={removeDebt} isLocked={isLocked}
-          />
-        ))}
+        {data.map((debt) => {
+          // NEW: Find the specific math prediction for this debt
+          const projection = (projectedDebts || []).find(p => p.id === debt.id);
+          const predictedBalance = projection ? projection.projectedEOY : null;
+
+          return (
+            <BaseAccountRow 
+              key={debt.id} item={debt} type="debt" isClosingOut={isClosingOut}
+              contributions={contributions} planSnapshot={planSnapshot?.debtData} 
+              onUpdate={updateDebt} onRemove={removeDebt} isLocked={isLocked}
+              predictedBalance={predictedBalance} // NEW: Pass it to the input row
+            />
+          );
+        })}
       </div>
 
       {!isClosingOut && (

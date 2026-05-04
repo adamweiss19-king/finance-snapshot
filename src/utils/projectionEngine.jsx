@@ -1,51 +1,37 @@
-/**
- * PROJECTION ENGINE
- * Handles the Year-End (EOY) mathematical forecasting for Assets, Debts, 
- * and overall Net Worth.
- */
-
-// ============================================================
-// SECTION 1: CORE PROJECTION CALCULATOR
-// ============================================================
-
-/**
- * Calculates the projected financial state of the user at Dec 31st.
- * * Formula for Assets: $$EOY = Balance \times (1 + \frac{Growth}{100}) + Contributions$$
- * Formula for Debt:   $$EOY = \max(0, Balance \times (1 + \frac{Interest}{100}) - Payments)$$
- * * @param {Object} params - The current financial state
- * @returns {Object} A "Receipt" of all projected totals
- */
 export function calculateProjections({
-  assetData,
-  debtData,
-  assetContributions,
-  debtContributions,
-  totalNetIncome,
-  totalSpending,
-  totalContributionsAmount
+  assetData = [],                // Added default []
+  debtData = [],                 // Added default []
+  assetContributions = [],       // Added default []
+  debtContributions = [],        // Added default []
+  totalNetIncome = 0,            // Added default 0
+  totalSpending = 0,             // Added default 0
+  totalContributionsAmount = 0   // Added default 0
 }) {
   
   // --- ASSET EOY CALCULATION ---
   let totalAssetEOY = 0;
   let totalMarketGrowth = 0;
   let totalCashAddedToAssets = 0;
+  const projectedAssets = []; // NEW: Array of individual predictions
 
   assetData.forEach(asset => {
-    // Calculate organic growth based on starting balance
     const growthAmount = asset.balance * ((asset.growth || 0) / 100);
     const baseEOY = asset.balance + growthAmount;
     
-    // Find cash flow specifically assigned to this account
     const linkedContributions = assetContributions
       .filter(c => String(c.linkedId) === String(asset.id))
       .reduce((sum, c) => sum + (c.amount || 0), 0);
     
     totalMarketGrowth += growthAmount;
     totalCashAddedToAssets += linkedContributions;
-    totalAssetEOY += baseEOY + linkedContributions;
+    
+    const assetEOY = baseEOY + linkedContributions;
+    totalAssetEOY += assetEOY;
+
+    // Save the individual prediction receipt
+    projectedAssets.push({ ...asset, projectedEOY: assetEOY });
   });
 
-  // Include contributions not yet linked to a specific Foundation asset
   const unlinkedContributions = assetContributions
     .filter(c => c.linkedId === 'new' || !c.linkedId)
     .reduce((sum, c) => sum + (c.amount || 0), 0);
@@ -56,31 +42,29 @@ export function calculateProjections({
   // --- DEBT EOY CALCULATION ---
   let totalDebtEOY = 0;
   let effectiveDebtPayments = 0; 
+  const projectedDebts = []; // NEW: Array of individual predictions
 
   debtData.forEach(debt => {
-    // Project the balance after interest accrual
     const baseEOY = debt.balance + (debt.balance * ((debt.interestRate || 0) / 100));
     
-    // Total payments assigned to this debt
     const linkedPayments = debtContributions
       .filter(p => String(p.linkedId) === String(debt.id))
       .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-    // Floor logic: Ensure payments don't result in a "negative debt"
+    let debtEOY = 0;
     if (linkedPayments > baseEOY) {
       effectiveDebtPayments += baseEOY; 
-      totalDebtEOY += 0;                
     } else {
       effectiveDebtPayments += linkedPayments;
-      totalDebtEOY += (baseEOY - linkedPayments);
+      debtEOY = baseEOY - linkedPayments;
     }
+    
+    totalDebtEOY += debtEOY;
+
+    // Save the individual prediction receipt
+    projectedDebts.push({ ...debt, projectedEOY: debtEOY });
   });
 
-  // ============================================================
-  // SECTION 2: FINAL NET WORTH & CASH FLOW SUMMARY
-  // ============================================================
-
-  // Unallocated: Money left over after taxes, spending, and all plan contributions
   const unallocatedCashFlow = totalNetIncome - totalSpending - totalContributionsAmount - effectiveDebtPayments;
   
   const currentNetWorth = 
@@ -97,6 +81,9 @@ export function calculateProjections({
     effectiveDebtPayments,
     unallocatedCashFlow,
     currentNetWorth,
-    projectedNetWorth
+    projectedNetWorth,
+    
+    projectedAssets, // EXPOSED FOR VARIANCE REPORT & WRAPPED MODAL!
+    projectedDebts   // EXPOSED FOR VARIANCE REPORT & WRAPPED MODAL!
   };
 }
