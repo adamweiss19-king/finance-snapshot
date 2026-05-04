@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // =============================================================================
 // 1. IMPORTS & DEPENDENCIES
@@ -41,8 +41,9 @@ import {
   getSnapshots, 
   saveSnapshot, 
   loadDemoProfileIntoStorage, 
-  clearAllSnapshots, 
-  deleteSnapshot 
+  clearAllSnapshots,
+  renameSnapshot, 
+  deleteSnapshot, 
 } from './utils/storageEngine';
 
 // =============================================================================
@@ -56,6 +57,25 @@ function App() {
   const [snapshots, setSnapshots] = useState(() => getSnapshots() || {});
   const [activeYear, setActiveYear] = useState(null); 
   
+  // NEW: A loading state to prevent the app from glitching while we wait for the database
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // NEW: The "Fetch on Load" Hook
+  useEffect(() => {
+    const fetchDatabase = async () => {
+      setIsInitializing(true);
+      const data = await getSnapshots(); // Calls our new Supabase function
+      
+      if (data && Object.keys(data).length > 0) {
+        setSnapshots(data);
+      }
+      setIsInitializing(false);
+    };
+
+    fetchDatabase();
+  }, []); // The empty array [] means "Only run this once when the app opens"
+
+
   // Smart Initial Routing: Tour for new users, Hub for returning users
   const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeV4');
   const hasSnapshots = Object.keys(snapshots).length > 0;
@@ -169,59 +189,99 @@ function App() {
     }
   };
 
-  const handleSmartSave = () => {
+  const handleSmartSave = async () => {
+    // 1. Tell the user we are saving (optional but good for UX)
+    const btn = document.activeElement;
+    const originalText = btn.innerHTML;
+    if (btn) btn.innerHTML = '⏳ Saving...';
+
     const fullState = { 
       age, filingStatus, stateTaxLevel, incomeData, assetData, 
       debtData, spendingData, assetContributions, debtContributions,
-      projections: totalProjections // Fixed: Properly placed inside the object!
+      projections: totalProjections 
     };
     
-    const updatedSnapshots = saveSnapshot(
+    // 2. Wait for Supabase to save this specific year
+    const savedYearData = await saveSnapshot(
       activeYear, 
       fullState, 
       isLocked ? 'actuals' : 'plan', 
       isLocked ? 'closed' : 'open'
     );
     
-    setSnapshots(updatedSnapshots);
-    alert(`✅ ${activeYear} ${isLocked ? 'Actuals' : 'Plan'} saved!`);
+    // 3. If successful, update ONLY this year in React's memory
+    if (savedYearData) {
+      setSnapshots(prevSnapshots => ({
+        ...prevSnapshots,
+        [activeYear]: savedYearData
+      }));
+      alert(`✅ ${activeYear} ${isLocked ? 'Actuals' : 'Plan'} saved!`);
+    } else {
+      alert(`❌ Failed to save. Please check your connection.`);
+    }
+
+    if (btn) btn.innerHTML = originalText;
   };
 
-  const handleDeleteYear = (yearToDelete) => {
-    const target = yearToDelete || activeYear; // Works from Hub OR Dashboard
-    if (window.confirm(`Are you sure you want to permanently delete the ${target} workspace?`)) {
-      const updatedSnapshots = deleteSnapshot(target);
-      setSnapshots(updatedSnapshots);
-      if (activeYear === target) setActiveYear(null);
-      setCurrentView('Hub'); 
+const handleDeleteYear = async (yearToDelete) => {
+    const target = yearToDelete || activeYear; 
+    console.log("🕵️‍♂️ Trash icon clicked! Attempting to delete year:", target);
+        if (window.confirm(`Are you sure you want to permanently delete the ${target} workspace?`)) {
+      
+      // 1. Wait for Supabase to delete the row
+      const isDeleted = await deleteSnapshot(target);
+
+      if (isDeleted) {
+        // 2. Targeted State Update: Remove only the deleted year from React memory
+        setSnapshots(prevSnapshots => {
+          const updatedSnapshots = { ...prevSnapshots };
+          delete updatedSnapshots[target];
+          return updatedSnapshots;
+        });
+        
+        if (activeYear === target) setActiveYear(null);
+        setCurrentView('Hub'); 
+      } else {
+        alert("❌ Error: Could not delete from database. Please check your connection.");
+      }
     }
   };
-
-  const handleRenameYear = (yearToRename) => {
+const handleRenameYear = async (yearToRename) => {
     const target = yearToRename || activeYear;
-    const newYear = window.prompt(`Enter the correct year for this workspace (currently ${target}):`, target);
+    const newYear = window.prompt(`Enter the correct year for this workspace:`, target);
+    
     if (!newYear || newYear === target) return;
-
     if (snapshots[newYear]) {
       alert(`❌ Error: A snapshot for ${newYear} already exists.`);
       return;
     }
 
-    const updatedSnapshots = { ...snapshots };
-    updatedSnapshots[newYear] = updatedSnapshots[target];
-    delete updatedSnapshots[target];
+    const success = await renameSnapshot(target, newYear);
 
-    setSnapshots(updatedSnapshots);
-    localStorage.setItem('financial_snapshots', JSON.stringify(updatedSnapshots));
-    if (activeYear === target) setActiveYear(newYear);
-  };
-
-  const handleNukeDatabase = () => {
-    if (window.confirm("⚠️ WARNING: This will permanently delete ALL saved years and completely reset the app. Are you sure?")) {
-      localStorage.clear();
-      window.location.reload();
+    if (success) {
+      setSnapshots(prev => {
+        const updated = { ...prev };
+        updated[newYear] = updated[target];
+        delete updated[target];
+        return updated;
+      });
+      if (activeYear === target) setActiveYear(newYear);
+      alert(`✅ Workspace moved to ${newYear}`);
+    } else {
+      alert("❌ Rename failed. Check connection.");
     }
   };
+
+const handleClearAll = async () => {
+  if (window.confirm("☢️ WARNING: This will permanently delete ALL your data. This cannot be undone. Proceed?")) {
+    const success = await clearAllSnapshots();
+    if (success) {
+      setSnapshots({});
+      setActiveYear(null);
+      setCurrentView('Hub');
+    }
+  }
+};
 
   // ===========================================================================
   // 4. YEAR-END WORKFLOWS
@@ -376,9 +436,20 @@ function App() {
   // ===========================================================================
   // 7. RENDER VIEW
   // ===========================================================================
-
+   if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-xl font-bold text-slate-700">Connecting to secure vault...</h2>
+        </div>
+      </div>
+    );
+  }
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-20">
+
+   
+   <div className="min-h-screen bg-slate-50 font-sans pb-20">
       
       {/* 🌐 THE GLOBAL NAVIGATION BAR */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -434,6 +505,8 @@ function App() {
               snapshots={snapshots} 
               onSelectYear={handleLoadSnapshot} 
               onCreateNew={handleCreateNewYear}
+              onDeleteYear={handleDeleteYear}
+              onRenameYear={handleRenameYear}
               onLoadProfile={loadProfile}
               onOpenHelp={() => setCurrentView('Welcome')}
             />
@@ -679,7 +752,7 @@ function App() {
         <p>
           <strong>Disclaimer:</strong> This application is a personal planning tool provided for educational and informational purposes only. I am not a financial advisor.
         </p>
-        <button onClick={handleNukeDatabase} className="text-[10px] font-black uppercase tracking-widest text-red-300 hover:text-red-500 transition-colors border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md">
+        <button onClick={handleClearAll} className="text-[10px] font-black uppercase tracking-widest text-red-300 hover:text-red-500 transition-colors border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md">
           ⚠️ Reset App & Delete All Data
         </button>
         

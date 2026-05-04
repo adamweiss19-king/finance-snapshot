@@ -16,14 +16,6 @@ function WorkspaceLobby({ snapshots, onSelectYear, onCreateNew, onLoadProfile, o
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4 md:px-8">
       <div className="max-w-4xl w-full relative">
-        <button 
-          onClick={onOpenHelp}
-          className="absolute top-0 right-0 mt-2 text-xs font-bold text-slate-400 hover:text-indigo-500 flex items-center gap-1 transition-colors px-3 py-1.5 rounded-full hover:bg-slate-200"
-        >
-          <span className="bg-slate-300 text-slate-700 w-4 h-4 rounded-full flex items-center justify-center text-[10px]">?</span>
-          Help / Tour
-        </button>
-        
         <div className="text-center mb-12 animate-fade-in">
           <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight mb-4">
             Your Financial <span className="text-indigo-600">Snapshots</span>
