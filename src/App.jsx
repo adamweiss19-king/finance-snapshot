@@ -141,17 +141,23 @@ function App() {
   // 3. STORAGE & DATA HANDLERS
   // ===========================================================================
   
-  const loadProfile = (profileName) => {
+  const loadProfile = async (profileName) => { 
     const profileData = getDemoProfile(profileName);
     if (profileData) {
-      const updatedSnapshots = loadDemoProfileIntoStorage(profileData);
-      setSnapshots(updatedSnapshots);
+      // Add 'await' here so React pauses until Supabase confirms the save!
+      const updatedSnapshots = await loadDemoProfileIntoStorage(profileData);
       
-      const years = Object.keys(updatedSnapshots).sort();
-      const latestYear = years[years.length - 1];
-      
-      handleLoadSnapshot(latestYear, updatedSnapshots);     
-      alert(`✅ Loaded ${profileName} history (through ${latestYear})`);
+      if (updatedSnapshots) {
+        setSnapshots(updatedSnapshots);
+        
+        const years = Object.keys(updatedSnapshots).sort();
+        const latestYear = years[years.length - 1];
+        
+        handleLoadSnapshot(latestYear, updatedSnapshots);     
+        alert(`✅ Loaded ${profileName} history (through ${latestYear})`);
+      } else {
+        alert("❌ Failed to load demo profile. Check your connection.");
+      }
     }
   };
 

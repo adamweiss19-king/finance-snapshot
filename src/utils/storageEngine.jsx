@@ -179,10 +179,34 @@ export const clearAllSnapshots = async () => {
   }
 };
 
-export const loadDemoProfileIntoStorage = (demoData) => {
+export const loadDemoProfileIntoStorage = async (demoData) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(demoData));
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // 🕵️‍♂️ GUEST/SANDBOX MODE FALLBACK
+    if (!user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(demoData));
+      return demoData;
+    }
+
+    // ☁️ CLOUD MODE: Encrypt and Batch Upload to Supabase
+    // 1. Convert the demoData object into an array of database rows
+    const rowsToInsert = Object.keys(demoData).map(year => {
+      return {
+        user_id: user.id,
+        year: year,
+        snapshot_data: encryptData(demoData[year]) // 🔒 Don't forget to scramble it!
+      };
+    });
+
+    // 2. Upload all the years at once
+    const { error } = await supabase
+      .from('workspaces')
+      .upsert(rowsToInsert, { onConflict: 'user_id, year' });
+
+    if (error) throw error;
     return demoData;
+
   } catch (error) {
     console.error("Storage Engine Error: Failed to load demo profile.", error);
     return false;
