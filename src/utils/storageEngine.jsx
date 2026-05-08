@@ -3,15 +3,45 @@
 const STORAGE_KEY = 'wealth_visualizer_snapshots_v2'; 
 
 import { supabase } from './supabaseClient';
+import CryptoJS from 'crypto-js';
+
+const MASTER_KEY = import.meta.env.VITE_MASTER_KEY;
+
+// 🔒 THE SCRAMBLER
+const encryptData = (data) => {
+  const dataString = JSON.stringify(data);
+  const scrambled = CryptoJS.AES.encrypt(dataString, MASTER_KEY).toString();
+  // We wrap it in a JSON object so Supabase doesn't get confused
+  return { vault_data: scrambled }; 
+};
+
+// 🔓 THE UNSCRAMBLER
+const decryptData = (encryptedObj) => {
+  if (!encryptedObj) return null;
+  
+  // Safety check: If it's old unencrypted data, just return it normally
+  if (!encryptedObj.vault_data) return encryptedObj; 
+
+  try {
+    const bytes = CryptoJS.AES.decrypt(encryptedObj.vault_data, MASTER_KEY);
+    return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+  } catch (error) {
+    console.error("Vault Error: Could not decrypt data.", error);
+    return null;
+  }
+};
 
 // Retrieve all snapshots from Supabase and format them for React
 export const getSnapshots = async () => {
   try {
     // 1. Check who is currently logged in
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return {}; // If no one is logged in, return empty state
+    if (!user) {
+      const localData = localStorage.getItem(STORAGE_KEY);
+      return localData ? JSON.parse(localData) : {};
+    }
 
-    // 2. Fetch all workspace rows for this user
+    // 2. Fetch all workspace rowsma for this user
     const { data, error } = await supabase
       .from('workspaces')
       .select('year, snapshot_data');
@@ -23,7 +53,7 @@ export const getSnapshots = async () => {
     const formattedSnapshots = {};
     if (data) {
       data.forEach((row) => {
-        formattedSnapshots[row.year] = row.snapshot_data;
+        formattedSnapshots[row.year] = decryptData(row.snapshot_data);
       });
     }
     
@@ -33,11 +63,21 @@ export const getSnapshots = async () => {
     return {}; 
   }
 };
+
+
 export const saveSnapshot = async (year, fullState, type = 'plan', status = 'open') => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User must be logged in to save.");
-
+    if (!user) {
+      const localData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      let snapshotData = localData[year] || { status: status, plan: {}, actuals: null };
+      snapshotData[type] = fullState;
+      snapshotData.status = status;
+      
+      localData[year] = snapshotData;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
+      return snapshotData; // Return just the year we saved
+    }
     const { data: existingRow } = await supabase
       .from('workspaces')
       .select('snapshot_data')
@@ -50,7 +90,8 @@ export const saveSnapshot = async (year, fullState, type = 'plan', status = 'ope
 
     const { error } = await supabase
       .from('workspaces')
-      .upsert({ user_id: user.id, year: year, snapshot_data: snapshotData }, { onConflict: 'user_id, year' });
+      .upsert({ user_id: user.id, year: year, snapshot_data: encryptData(snapshotData) }, 
+      { onConflict: 'user_id, year' });
 
     if (error) throw error;
 
@@ -67,9 +108,16 @@ export const saveSnapshot = async (year, fullState, type = 'plan', status = 'ope
 export const deleteSnapshot = async (year) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User must be logged in to delete.");
 
-    // Tell Supabase to delete the row where user_id and year match
+    // 🕵️‍♂️ GUEST MODE FALLBACK
+    if (!user) {
+      const localData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      delete localData[year]; // Delete just this year
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
+      return true; // Tell App.jsx it worked
+    }
+
+    // ☁️ CLOUD MODE (Your existing code)
     const { error } = await supabase
       .from('workspaces')
       .delete()
@@ -77,12 +125,11 @@ export const deleteSnapshot = async (year) => {
       .eq('year', year);
 
     if (error) throw error;
-    
-    return true; // Return true so App.jsx knows it was successful
+    return true;
 
   } catch (error) {
     console.error("Storage Engine Error: Failed to delete snapshot.", error);
-    return false; // Return false if it fails
+    return false; 
   }
 };
 
@@ -91,52 +138,41 @@ export const renameSnapshot = async (oldYear, newYear) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User must be logged in.");
 
-    // 1. Get the data from the old year
-    const { data: row, error: fetchError } = await supabase
+    // The 1-Step Update: Just change the year on the existing row!
+    const { error } = await supabase
       .from('workspaces')
-      .select('snapshot_data')
+      .update({ year: newYear })
       .eq('year', oldYear)
-      .single();
+      .eq('user_id', user.id); // Extra safety check to only touch this user's data
 
-    if (fetchError) throw fetchError;
-
-    // 2. Create the new year row with the same data
-    const { error: insertError } = await supabase
-      .from('workspaces')
-      .insert({
-        user_id: user.id,
-        year: newYear,
-        snapshot_data: row.snapshot_data
-      });
-
-    if (insertError) throw insertError;
-
-    // 3. Delete the old year row
-    const { error: deleteError } = await supabase
-      .from('workspaces')
-      .delete()
-      .eq('year', oldYear);
-
-    if (deleteError) throw deleteError;
-
+    if (error) throw error;
     return true;
+    
   } catch (error) {
     console.error("Storage Engine Error: Failed to rename.", error);
     return false;
   }
 };
+
 export const clearAllSnapshots = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
 
+    // 🕵️‍♂️ GUEST MODE FALLBACK
+    if (!user) {
+      localStorage.removeItem(STORAGE_KEY); // Nuke the entire key
+      return true;
+    }
+
+    // ☁️ CLOUD MODE (Your existing code)
     const { error } = await supabase
       .from('workspaces')
       .delete()
-      .eq('user_id', user.id); // The "Nuke" command
+      .eq('user_id', user.id); 
 
     if (error) throw error;
     return true;
+    
   } catch (error) {
     console.error("Nuke failed:", error);
     return false;

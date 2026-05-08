@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+import AuthLobby from './components/AuthLobby';
+import { supabase } from './utils/supabaseClient';
+
 // =============================================================================
 // 1. IMPORTS & DEPENDENCIES
 // =============================================================================
@@ -56,16 +59,41 @@ function App() {
   // ---------------------------------------------------------
   const [snapshots, setSnapshots] = useState(() => getSnapshots() || {});
   const [activeYear, setActiveYear] = useState(null); 
-  
-  // NEW: A loading state to prevent the app from glitching while we wait for the database
+
+  const [showNukeModal, setShowNukeModal] = useState(false);
+  const [nukeInput, setNukeInput] = useState("");
+  const [user, setUser] = useState(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // NEW: The "Fetch on Load" Hook
+  // 1. THE SECURITY CAMERA: Listen for login/logout events
   useEffect(() => {
+    // Check if they are already logged in when the app opens
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+    });
+
+    // Listen for changes (like when they click "Log In" in the AuthLobby)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+
+  // 2. FETCH DATA ONLY IF LOGGED IN OR GUEST
+   useEffect(() => {
     const fetchDatabase = async () => {
+      // If they aren't logged in AND aren't a guest, block the fetch
+      if (!user && !isGuest) {
+        setSnapshots({}); 
+        setIsInitializing(false);
+        return;
+      }
+
       setIsInitializing(true);
-      const data = await getSnapshots(); // Calls our new Supabase function
-      
+      const data = await getSnapshots(); // The engine will figure out if it's local or cloud
       if (data && Object.keys(data).length > 0) {
         setSnapshots(data);
       }
@@ -73,7 +101,7 @@ function App() {
     };
 
     fetchDatabase();
-  }, []); // The empty array [] means "Only run this once when the app opens"
+  }, [user, isGuest]);
 
 
   // Smart Initial Routing: Tour for new users, Hub for returning users
@@ -180,7 +208,6 @@ function App() {
 
     const newSnapshots = { ...snapshots, [year]: { status: 'open', plan: startingPlan } };
     setSnapshots(newSnapshots);
-    localStorage.setItem('financial_snapshots', JSON.stringify(newSnapshots));
     
     handleLoadSnapshot(year, newSnapshots);
 
@@ -225,63 +252,77 @@ function App() {
 
 const handleDeleteYear = async (yearToDelete) => {
     const target = yearToDelete || activeYear; 
-    console.log("🕵️‍♂️ Trash icon clicked! Attempting to delete year:", target);
-        if (window.confirm(`Are you sure you want to permanently delete the ${target} workspace?`)) {
-      
-      // 1. Wait for Supabase to delete the row
-      const isDeleted = await deleteSnapshot(target);
+    
+    // 1. Wait for Supabase to delete the row (No more window.confirm!)
+    const isDeleted = await deleteSnapshot(target);
 
-      if (isDeleted) {
-        // 2. Targeted State Update: Remove only the deleted year from React memory
-        setSnapshots(prevSnapshots => {
-          const updatedSnapshots = { ...prevSnapshots };
-          delete updatedSnapshots[target];
-          return updatedSnapshots;
-        });
-        
-        if (activeYear === target) setActiveYear(null);
-        setCurrentView('Hub'); 
-      } else {
-        alert("❌ Error: Could not delete from database. Please check your connection.");
-      }
+    if (isDeleted) {
+      // 2. Targeted State Update
+      setSnapshots(prevSnapshots => {
+        const updatedSnapshots = { ...prevSnapshots };
+        delete updatedSnapshots[target];
+        return updatedSnapshots;
+      });
+      
+      if (activeYear === target) setActiveYear(null);
+      setCurrentView('Hub'); 
+    } else {
+      alert("❌ Error: Could not delete from database. Please check your connection.");
     }
   };
-const handleRenameYear = async (yearToRename) => {
-    const target = yearToRename || activeYear;
-    const newYear = window.prompt(`Enter the correct year for this workspace:`, target);
-    
-    if (!newYear || newYear === target) return;
+
+const handleRenameYear = async (oldYear, newYear) => {
+    // 1. Basic safety checks
+    if (!newYear || newYear === oldYear) return;
     if (snapshots[newYear]) {
       alert(`❌ Error: A snapshot for ${newYear} already exists.`);
       return;
     }
 
-    const success = await renameSnapshot(target, newYear);
+    // 2. Call the database
+    const success = await renameSnapshot(oldYear, newYear);
 
+    // 3. Update React state if successful
     if (success) {
       setSnapshots(prev => {
         const updated = { ...prev };
-        updated[newYear] = updated[target];
-        delete updated[target];
+        updated[newYear] = updated[oldYear];
+        delete updated[oldYear];
         return updated;
       });
-      if (activeYear === target) setActiveYear(newYear);
-      alert(`✅ Workspace moved to ${newYear}`);
+      if (activeYear === oldYear) setActiveYear(newYear);
+      // We can remove the alert here since the UI will visually update instantly!
     } else {
       alert("❌ Rename failed. Check connection.");
     }
   };
 
-const handleClearAll = async () => {
-  if (window.confirm("☢️ WARNING: This will permanently delete ALL your data. This cannot be undone. Proceed?")) {
+const executeNuke = async () => {
+    if (nukeInput !== "DELETE") return;
+    
     const success = await clearAllSnapshots();
     if (success) {
       setSnapshots({});
       setActiveYear(null);
       setCurrentView('Hub');
+      setShowNukeModal(false);
+      setNukeInput(""); // Reset for next time
+    } else {
+      alert("❌ Error: Could not delete data.");
     }
-  }
-};
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      alert("❌ Error logging out.");
+    } else {
+      // Clear out the current session memory just to be safe
+      setSnapshots({});
+      setActiveYear(null);
+      setCurrentView('Welcome');
+    }
+  };
 
   // ===========================================================================
   // 4. YEAR-END WORKFLOWS
@@ -436,7 +477,7 @@ const handleClearAll = async () => {
   // ===========================================================================
   // 7. RENDER VIEW
   // ===========================================================================
-   if (isInitializing) {
+if (isInitializing) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
@@ -446,9 +487,25 @@ const handleClearAll = async () => {
       </div>
     );
   }
-  return (
 
-   
+  // INTERCEPT 1: Always show the Tour first for brand new users
+  if (currentView === 'Welcome') {
+    return (
+      <WelcomeModal onStart={() => {
+        localStorage.setItem('hasSeenWelcomeV4', 'true');
+        setCurrentView('Hub');
+      }} />
+    );
+  }
+
+  // INTERCEPT 2: The Auth Gate. If they finished the tour but aren't logged in, block them here.
+  if (!user) {
+    if (!user && !isGuest) {
+    return <AuthLobby onGoBack={() => setCurrentView('Welcome')} onGuest={() => setIsGuest(true)} />;
+  } 
+ }
+
+  return (
    <div className="min-h-screen bg-slate-50 font-sans pb-20">
       
       {/* 🌐 THE GLOBAL NAVIGATION BAR */}
@@ -489,8 +546,15 @@ const handleClearAll = async () => {
             >
               💡 Tour
             </button>
-          </div>
 
+            <div className="w-px bg-slate-300 mx-1"></div> {/* A little visual divider */}
+            <button 
+              onClick={handleLogout}
+              className="px-4 py-1.5 rounded-lg font-bold text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all"
+            >
+              🚪 Logout
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -752,7 +816,7 @@ const handleClearAll = async () => {
         <p>
           <strong>Disclaimer:</strong> This application is a personal planning tool provided for educational and informational purposes only. I am not a financial advisor.
         </p>
-        <button onClick={handleClearAll} className="text-[10px] font-black uppercase tracking-widest text-red-300 hover:text-red-500 transition-colors border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md">
+        <button onClick={() => setShowNukeModal(true)} className="text-[10px] font-black uppercase tracking-widest text-red-300 hover:text-red-500 transition-colors border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md">
           ⚠️ Reset App & Delete All Data
         </button>
         
@@ -801,6 +865,48 @@ const handleClearAll = async () => {
           onSave={handleSaveHomeWizard} 
         />
       </footer>
+      {/* THE NUKE MODAL */}
+      {showNukeModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-4 border-red-500">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-4xl">☢️</span>
+              <h2 className="text-2xl font-black text-slate-800">Clear All Data</h2>
+            </div>
+            <p className="text-slate-600 mb-6 font-medium">
+              You are about to permanently delete all financial snapshots from the database. 
+              <strong className="text-red-600 block mt-2">This action cannot be undone.</strong>
+            </p>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-6">
+              <label className="text-xs font-bold text-red-800 uppercase tracking-wider mb-2 block">
+                Type "DELETE" to confirm
+              </label>
+              <input 
+                type="text" 
+                value={nukeInput}
+                onChange={(e) => setNukeInput(e.target.value)}
+                className="w-full bg-white border border-red-200 rounded-lg p-3 text-lg font-black text-slate-800 focus:ring-2 focus:ring-red-500 outline-none"
+                placeholder="DELETE"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setShowNukeModal(false); setNukeInput(""); }} 
+                className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeNuke} 
+                disabled={nukeInput !== "DELETE"}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+              >
+                Permanently Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

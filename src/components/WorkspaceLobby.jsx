@@ -3,12 +3,29 @@ import React, { useState } from 'react';
 function WorkspaceLobby({ snapshots, onSelectYear, onCreateNew, onLoadProfile, onOpenHelp, onRenameYear, onDeleteYear }) {
   const [newYearInput, setNewYearInput] = useState(new Date().getFullYear().toString());
   const [isCreating, setIsCreating] = useState(false);
+  const [deletingYear, setDeletingYear] = useState(null); 
+  
+  // NEW: State for our inline editing
+  const [editingYear, setEditingYear] = useState(null); 
+  const [editValue, setEditValue] = useState("");      
 
   const handleCreate = (e) => {
     e.preventDefault();
     if (newYearInput.trim() === '') return;
     onCreateNew(newYearInput.trim());
     setIsCreating(false);
+  };
+
+  // NEW: The function that runs when you click "Save" on the inline form
+  const submitRename = async (oldYear) => {
+    const trimmedVal = editValue.trim();
+    if (trimmedVal === oldYear || !trimmedVal) {
+      setEditingYear(null); // Just close the form if nothing changed
+      return;
+    }
+    // Call the newly updated function in App.jsx
+    await onRenameYear(oldYear, trimmedVal);
+    setEditingYear(null); // Close the form after saving
   };
 
   const sortedYears = Object.keys(snapshots).sort().reverse();
@@ -25,6 +42,7 @@ function WorkspaceLobby({ snapshots, onSelectYear, onCreateNew, onLoadProfile, o
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
           
+          {/* ... Create New Button Code (Unchanged) ... */}
           {isCreating ? (
             <div className="bg-white border-2 border-indigo-500 shadow-lg rounded-2xl p-6 flex flex-col justify-center animate-fade-in">
               <form onSubmit={handleCreate} className="flex flex-col gap-3">
@@ -51,10 +69,19 @@ function WorkspaceLobby({ snapshots, onSelectYear, onCreateNew, onLoadProfile, o
             
             return (
               <div key={year} className="relative group animate-fade-in cursor-pointer" onClick={() => onSelectYear(year)}>
+                
                 {/* FLOATING ACTION MENU */}
                 <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => onRenameYear(year)} className="w-8 h-8 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-500 shadow-sm flex items-center justify-center" title="Rename Workspace">✏️</button>
-                  <button onClick={() => onDeleteYear(year)} className="w-8 h-8 bg-white/90 backdrop-blur-sm border border-red-100 rounded-lg hover:bg-red-50 text-red-500 shadow-sm flex items-center justify-center" title="Delete Workspace">🗑️</button>
+                  {/* NEW: Click the pencil to activate editing mode */}
+                  <button 
+                    onClick={() => {
+                      setEditingYear(year);
+                      setEditValue(year);
+                    }} 
+                    className="w-8 h-8 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-500 shadow-sm flex items-center justify-center" 
+                    title="Rename Workspace"
+                  >✏️</button>
+                  <button onClick={() => setDeletingYear(year)} className="w-8 h-8 bg-white/90 backdrop-blur-sm border border-red-100 rounded-lg hover:bg-red-50 text-red-500 shadow-sm flex items-center justify-center" title="Delete Workspace">🗑️</button>
                 </div>
 
                 <div className="bg-white border border-slate-200 hover:border-indigo-300 shadow-sm hover:shadow-md rounded-2xl p-6 flex flex-col text-left transition-all h-full relative overflow-hidden">
@@ -65,8 +92,40 @@ function WorkspaceLobby({ snapshots, onSelectYear, onCreateNew, onLoadProfile, o
                       {isClosed ? '🔒 Closed Actuals' : '📝 Open Plan'}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-black text-slate-800">{year} Snapshot</h3>
-                  <p className="text-sm font-semibold text-slate-400 mt-1">Click to open &rarr;</p>
+
+                  {/* NEW: Toggle between the Form and the Title */}
+                {deletingYear === year ? (
+                    <div className="flex flex-col gap-2 w-full z-20 h-full justify-center items-center text-center animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-3xl mb-1">⚠️</span>
+                      <h4 className="text-lg font-black text-red-600">Delete {year}?</h4>
+                      <p className="text-xs text-slate-500 font-medium mb-1">This cannot be undone.</p>
+                      <div className="flex gap-2 w-full mt-auto">
+                        <button onClick={() => setDeletingYear(null)} className="flex-1 text-xs font-bold bg-slate-100 text-slate-600 py-2 rounded-lg hover:bg-slate-200 transition">Cancel</button>
+                        <button onClick={() => { onDeleteYear(year); setDeletingYear(null); }} className="flex-1 bg-red-600 text-white text-xs font-bold py-2 rounded-lg shadow-sm hover:bg-red-700 transition">Delete</button>
+                      </div>
+                    </div>
+                  ) : editingYear === year ? (
+                    <div className="flex flex-col gap-2 w-full z-20" onClick={(e) => e.stopPropagation()}>
+                      <input 
+                        autoFocus
+                        className="bg-slate-50 border border-indigo-300 rounded-lg p-2 text-xl font-black text-slate-800 outline-none"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && submitRename(year)}
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingYear(null)} className="flex-1 text-xs font-bold text-slate-400 hover:text-slate-600 py-1">Cancel</button>
+                        <button onClick={() => submitRename(year)} className="flex-1 bg-indigo-600 text-white text-xs font-bold py-1.5 rounded-lg shadow-sm">Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h3 className="text-2xl font-black text-slate-800">{year} Snapshot</h3>
+                      <p className="text-sm font-semibold text-slate-400 mt-1">Click to open &rarr;</p>
+                    </>
+                  )}
+
+
                 </div>
               </div>
             );
